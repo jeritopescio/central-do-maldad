@@ -1,0 +1,7 @@
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+
+# datos de la banda: no van al repo público
+js/seed.js

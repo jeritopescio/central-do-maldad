@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Central do Maldad</title>
+<meta name="description" content="La central de Evvil: agenda, quests, caja y achievvilments.">
+<meta name="theme-color" content="#060912">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Do Maldad">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Gochi+Hand&family=Londrina+Solid:wght@300;400;900&display=swap">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<canvas id="sky" aria-hidden="true"></canvas>
+<header class="top">
+  <div class="top-in">
+    <button class="logo-btn" data-act="nav" data-v="banda" aria-label="Evvil: ir a Banda"><img class="logo" src="img/evvil.svg" alt="Evvil"></button>
+    <button class="lvl-pill" id="lvlpill" data-act="pill" aria-label="Levvel de la banda"></button>
+    <div class="who" id="who"></div>
+  </div>
+</header>
+<div class="shell">
+  <nav class="nav" id="nav" aria-label="Secciones"></nav>
+  <button class="fab" id="fab" data-act="add" aria-label="Agregar una quest, un evento o plata"></button>
+  <main id="view"></main>
+</div>
+<div id="sheet" class="sheet" hidden></div>
+<div id="overlay" hidden></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<div id="milktoy" class="milktoy" hidden></div>
+<div id="splash" class="splash" hidden></div>
+<div id="gate" class="gate" hidden></div>
+<div id="game" class="game" hidden></div>
+<script src="js/config.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/app.js"></script>
+<script src="js/milktoy.js"></script>
+<script src="js/game.js"></script>
+<script src="js/sync.js"></script>
+</body>
+</html>
