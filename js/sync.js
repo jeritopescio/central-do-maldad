@@ -6,7 +6,9 @@
   const live = !!(C.supabaseUrl && C.supabaseAnonKey);
   const Sync = window.Sync = {live, client:null, rows:new Map()};
   const KIND = {task:'tasks', song:'songs', event:'events', mov:'movs', call:'calls', feed:'feed', xp:'xpl', sun:'sunLog'};
-  const SB_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
+  // Compara sin importar el orden de los campos (la base los reordena).
+  const canon = v => JSON.stringify(v, (k, x) => x && typeof x === 'object' && !Array.isArray(x) ? Object.keys(x).sort().reduce((o, key) => (o[key] = x[key], o), {}) : x);
+  const SB_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js';
 
   function toRows(s){
     const m = new Map();
@@ -36,7 +38,7 @@
   function diff(){
     const now = toRows(S), ups = [], dels = [];
     for(const [id, r] of now){
-      const j = JSON.stringify(r.data), old = Sync.rows.get(id);
+      const j = canon(r.data), old = Sync.rows.get(id);
       if(!old || old.j !== j){ ups.push({id, kind:r.kind, data:r.data, updated_by:S.me}); Sync.rows.set(id, {kind:r.kind, data:r.data, j}); }
     }
     for(const id of [...Sync.rows.keys()]) if(!now.has(id)){ dels.push(id); Sync.rows.delete(id); }
@@ -73,7 +75,7 @@
   let rb = null;
   function onChange(p){
     if(p.eventType === 'DELETE'){ const id = p.old && p.old.id; if(!id || !Sync.rows.has(id)) return; Sync.rows.delete(id); }
-    else { const r = p.new, j = JSON.stringify(r.data), old = Sync.rows.get(r.id); if(old && old.j === j) return; Sync.rows.set(r.id, {kind:r.kind, data:r.data, j}); }
+    else { const r = p.new, j = canon(r.data), old = Sync.rows.get(r.id); if(old && old.j === j) return; Sync.rows.set(r.id, {kind:r.kind, data:r.data, j}); }
     clearTimeout(rb); rb = setTimeout(rebuild, 120);
   }
   function rebuild(){
@@ -118,7 +120,7 @@
     Sync.client = window.supabase.createClient(C.supabaseUrl, C.supabaseAnonKey, {auth:{persistSession:false, autoRefreshToken:false}});
     let rows;
     try{ rows = await fetchAll(); }catch(e){ console.error(e); return retry('No pude traer los datos. ¿Hay internet?'); }
-    Sync.rows = new Map(rows.map(r => [r.id, {kind:r.kind, data:r.data, j:JSON.stringify(r.data)}]));
+    Sync.rows = new Map(rows.map(r => [r.id, {kind:r.kind, data:r.data, j:canon(r.data)}]));
     setState(fromRows(rows));
     Sync.client.channel('items').on('postgres_changes', {event:'*', schema:'public', table:'items'}, onChange).subscribe();
     const chosen = loadLocal().me;

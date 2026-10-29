@@ -1,5 +1,5 @@
 /* Guarda la app en el celu para que abra rápido y sin señal. Los datos viajan aparte (Supabase). */
-const CACHE = 'cdm-v3';
+const CACHE = 'cdm-v4';
 const SHELL = ['./', 'index.html', 'css/app.css', 'js/config.js', 'js/app.js', 'js/milktoy.js', 'js/game.js', 'js/sync.js', 'manifest.webmanifest', 'fonts/evvil-regular.woff',
   'img/evvil.svg', 'img/cosito.webp', 'img/fondo.jpg', 'img/jero.webp', 'img/mica.webp', 'img/fran.webp', 'img/bajo.webp', 'img/bata.webp', 'img/guitarra.webp',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
