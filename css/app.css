@@ -461,12 +461,9 @@ textarea{resize:vertical;min-height:64px;font:500 15px/1.4 var(--f-body)}
 .sp-sun{position:absolute;left:50%;top:44%;width:min(46vw,240px);aspect-ratio:1;transform:translate(-50%,-50%);z-index:4;border-radius:50%}
 .sp-sun img{width:100%;height:100%;display:block;animation:spin 16s linear infinite;filter:drop-shadow(0 0 28px rgba(242,66,106,.55))}
 .sp-hint{position:absolute;left:0;right:0;top:calc(44% + min(25vw,128px));text-align:center;z-index:4;margin:0;font-family:var(--f-evvil);font-size:22px;color:var(--bone);text-shadow:0 2px 8px #000;animation:pulse 2.2s ease-in-out infinite}
-.sp-band{position:absolute;left:0;right:0;bottom:0;height:34vh;z-index:2}
-.sp-m{position:absolute;bottom:0;height:100%;width:auto;max-width:none}
-.sp-mica{left:-14%;z-index:2}
-.sp-jero{left:50%;bottom:8vh;transform:translateX(-50%);z-index:1}
-.sp-fran{right:-14%;z-index:2}
-@media (min-width:700px){.sp-band{left:50%;right:auto;width:720px;transform:translateX(-50%)}.sp-mica{left:0}.sp-fran{right:0}}
+.sp-band{position:absolute;left:0;right:0;bottom:0;z-index:2;display:flex;justify-content:center;align-items:flex-end}
+.sp-m{display:block;height:min(34vh,51vw);width:auto;max-width:none;margin:0 -6.5vw}
+@media (min-width:700px){.sp-m{height:min(36vh,300px);margin:0 -18px}}
 .sp-fly{position:absolute;z-index:1;left:0;top:0;height:13vh;max-height:120px;opacity:.92;filter:drop-shadow(0 8px 14px rgba(0,0,0,.5));will-change:transform}
 .sp-fly.f1{animation:fly1 23s linear infinite}
 .sp-fly.f2{height:10vh;animation:fly2 29s linear -9s infinite}
