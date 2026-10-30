@@ -15,40 +15,32 @@ const CALL_ST = ['Vista','Preparando','Enviada','Resultado'];
 const LV = [[0,'Primer solcito'],[120,'Jornada de roc'],[300,'Mate y distorsión'],[550,'Terapia de grupo'],[850,'Metal simpático'],[1200,'Alerta do maldad'],[1600,'Re tight'],[2150,'Los amigos de Evvil'],[2800,'Cabelleras al viento'],[3550,'Trilogía'],[4400,'Evvil, Evvil, Evvil'],[5350,'Roc on'],[6400,'Leyenda platense']];
 const ARISTAS = [{id:'musica',name:'Música'},{id:'escenario',name:'Escenario'},{id:'contenido',name:'Contenido'},{id:'produccion',name:'Producción'},{id:'comunidad',name:'Comunidad'},{id:'banda',name:'Banda'},{id:'juego',name:'Pasatiempo'},{id:'bizarro',name:'Bizarros'}];
 const ACH = [
-  {id:'lata',ar:'musica',ic:'📼',name:'En la lata',desc:'11 temas grabados en lo de Ferna para «Evvil, Evvil, Evvil».'},
-  {id:'coros',ar:'musica',ic:'😇',name:'Coros celestiales',desc:'Grabar coros en lo de Fraxu.'},
   {id:'single1',ar:'musica',ic:'🚀',name:'Primer single',desc:'«Los Chicos» OUT en todas las plataformas.'},
-  {id:'vhs',ar:'musica',ic:'📹',name:'Cinta mágica',desc:'Videoclip filmado en VHS por Aaron Marshall.'},
-  {id:'tuto',ar:'musica',ic:'🎸',name:'Clase magistral',desc:'Tutorial del solo de «Los Chicos».'},
-  {id:'bandcamp',ar:'musica',ic:'💿',name:'Bandcamp',desc:'Evvil tiene su Bandcamp.'},
   {id:'master2',ar:'musica',ic:'🎚️',name:'Master en mano',desc:'«Los Papás» masterizado por Fermín Irigoyen.'},
+  {id:'coros',ar:'musica',ic:'😇',name:'Coros celestiales',desc:'Terminar de grabar las voces que faltan en lo de Fraxu, los tres.'},
+  {id:'mezcla',ar:'musica',ic:'🎛️',name:'Todo mezclado',desc:'Los 11 temas mezclados en lo de Fraxu.'},
+  {id:'kidclip',ar:'musica',ic:'🎬',name:'Luz, cámara, Kid',desc:'Filmar el video de «El Kid».'},
+  {id:'nuevo',ar:'musica',ic:'✍️',name:'Tema nuevo',desc:'Terminar un tema que no esté en el disco.'},
   {id:'doble',ar:'musica',ic:'⚔️',name:'Doble filo',desc:'Dos singles OUT.',hint:'Se desbloquea solo cuando «Los Papás» pasa a OUT.',prog:'out',goal:2},
   {id:'disco',ar:'musica',ic:'👑',name:'Evvil, Evvil, Evvil',desc:'Los 11 temas publicados.',prog:'out',goal:11},
-  {id:'formica',ar:'escenario',ic:'🐜',name:'Evil Formica',desc:'Antes de Evvil fuimos Evil Formica, con los temas de Fran.'},
-  {id:'colapso',ar:'escenario',ic:'🐼',name:'Casa Únclan',desc:'Viernes 21 de marzo con Colapso y Ortiba, todavía como Evil Formica.'},
-  {id:'mugre',ar:'escenario',ic:'🧼',name:'Debut eVVil',desc:'Primer show como Evvil (ex Fórmica): Festival Mugre o Muerte, en Fábrica Cita.'},
-  {id:'verano',ar:'escenario',ic:'🌞',name:'Un Verano',desc:'Ciclo Un Verano en Guajira, con Ortiba y No Me Toques.'},
-  {id:'gatos',ar:'escenario',ic:'🐈',name:'Ciudad de Gatos',desc:'Fecha junto a Mister y Los Misterios.'},
   {id:'show1',ar:'escenario',ic:'1️⃣',name:'El primer show de Evvil',desc:'Pura Vida, junto a Poderes Extraños.'},
-  {id:'bloques',ar:'escenario',ic:'🧱',name:'Bloques Irreconciliables',desc:'Domingo en Pura Vida junto a Bloques Irreconciliables.'},
-  {id:'hinchada',ar:'escenario',ic:'⚽',name:'La hinchada',desc:'Mundial de bandas en Ciudad de Gatos.'},
-  {id:'stream',ar:'escenario',ic:'📡',name:'Al aire',desc:'Tocar en vivo en un stream.'},
   {id:'show2',ar:'escenario',ic:'2️⃣',name:'El segundo show de Evvil',desc:'Guajira, junto a Morfar.'},
-  {id:'federal',ar:'escenario',ic:'🗺️',name:'Visita federal',desc:'Compartir escenario con una banda de otra provincia (Morfar, de Córdoba).'},
-  {id:'trasnoche',ar:'escenario',ic:'🧛',name:'Función de trasnoche',desc:'Tocar a la 1 de la mañana entre pelis de terror en VHS (Espantoctubre).'},
   {id:'trilogia',ar:'escenario',ic:'3️⃣',name:'Trilogía',desc:'El tercer y último show de Evvil (hasta el año que viene).',hint:'Sábado 19/12 en Pura Vida.'},
   {id:'ruta',ar:'escenario',ic:'🛣️',name:'Ruta',desc:'Tocar fuera de La Plata.',hint:'¿Mar del Plata con Macabra?'},
+  {id:'lleno',ar:'escenario',ic:'🎟️',name:'Lleno total',desc:'Que se agoten las entradas de un show.'},
+  {id:'otra',ar:'escenario',ic:'🔁',name:'¡Otra!',desc:'Que el público pida un tema más.'},
+  {id:'invitados',ar:'escenario',ic:'🎤',name:'Invitados',desc:'Que alguien suba a tocar o cantar un tema con nosotros.'},
+  {id:'vuelta',ar:'escenario',ic:'🌱',name:'La vuelta',desc:'El primer show de 2027.'},
   {id:'reel1',ar:'contenido',ic:'🎬',name:'Primer reel',desc:'El primer reel de la banda.'},
-  {id:'publi',ar:'contenido',ic:'📣',name:'Publi',desc:'Poner plata en IG para mover un post.'},
-  {id:'collab',ar:'contenido',ic:'🤝',name:'Post colaborativo',desc:'Publicar en colaboración con otras cuentas.'},
   {id:'tras',ar:'contenido',ic:'🎥',name:'Detrás de escena',desc:'Subir un video de ensayo o de grabación.'},
+  {id:'reels10',ar:'contenido',ic:'🎞️',name:'Reelero',desc:'Subir 10 reels.'},
+  {id:'vivo',ar:'contenido',ic:'🔴',name:'En vivo',desc:'Hacer un vivo en Instagram.'},
   {id:'hito',ar:'contenido',ic:'📈',name:'Hito en redes',desc:'Las métricas aparecen solo así: cuando cruzan un hito.',hint:'Ejemplo: 1.000 oyentes mensuales.'},
-  {id:'mail',ar:'produccion',ic:'✉️',name:'Mail propio',desc:'evvil.lml@gmail.com existe.'},
   {id:'stickers',ar:'produccion',ic:'🏷️',name:'Stickers',desc:'Stickers de Evvil para regalar en los shows.'},
-  {id:'puas',ar:'produccion',ic:'🔺',name:'Púas propias',desc:'Púas con el diseño de Evvil. Ya repartimos varias.'},
   {id:'parche',ar:'produccion',ic:'🥁',name:'Parche de bombo',desc:'El bombo con el logo de Evvil.'},
-  {id:'gace',ar:'produccion',ic:'📰',name:'Prensa lista',desc:'Gacetilla y press kit armados.'},
-  {id:'cajapropia',ar:'produccion',ic:'💸',name:'Pagamos con la caja',desc:'El master de «Los Papás» salió de la plata de la banda.'},
+  {id:'remeras',ar:'produccion',ic:'👕',name:'Remeras',desc:'Remeras de Evvil.'},
+  {id:'rider',ar:'produccion',ic:'📋',name:'Rider listo',desc:'Rider técnico y backline armados para mandar.'},
+  {id:'merch',ar:'produccion',ic:'🛍️',name:'Puesto de merch',desc:'Vender merch en un show.'},
   {id:'promo',ar:'produccion',ic:'🐉',name:'Final Boss derrotado',desc:'Toda la promo del tercer show, hecha.',hint:'Quests del Final Boss.',auto:true},
   {id:'amigos',ar:'comunidad',ic:'💌',name:'Los amigos de Evvil',desc:'Entradas con precio «amigo que ayuda» y «súper amigo».'},
   {id:'primerfan',ar:'comunidad',ic:'⭐',name:'Primer fan',desc:'Que nos escriba alguien que no es familia ni amigo.'},
@@ -429,7 +421,7 @@ function renderMisiones(){
   } else if(S.ui.mis==='singles'){
     const main = S.songs.filter(s => s.note), lata = S.songs.filter(s => !s.note);
     body = `<div class="songs">${main.map(songCard).join('')}</div>
-      <section class="card" style="margin-top:16px"><h2 class="h">En la lata <span class="h-sub">${lata.length} temas grabados esperando su turno</span></h2><div class="lata">${lata.map(s => `<span>${esc(s.name)}</span>`).join('')}</div></section>`;
+      <section class="card" style="margin-top:16px"><h2 class="h">En lo de Fer <span class="h-sub">${lata.length} temas grabados que Fer le tiene que pasar a Fraxu</span></h2><div class="lata">${lata.map(s => `<span>${esc(s.name)}</span>`).join('')}</div></section>`;
   } else {
     body = `<section class="card radar"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="32" cy="32" r="28" opacity=".35"/><circle cx="32" cy="32" r="18" opacity=".55"/><circle cx="32" cy="32" r="8"/><path d="M32 32 52 14" stroke-width="3" stroke-linecap="round"/><circle cx="45" cy="22" r="3" fill="currentColor"/><circle cx="20" cy="42" r="2.5" fill="currentColor" opacity=".7"/></svg>
       <div><h2 class="h" style="margin-bottom:6px">Radar de convocatorias</h2><p>Cada semana Claude busca fondos, festivales, concursos y ciclos abiertos y los carga acá con su fecha de cierre. Los pasos se pueden mover para adelante y para atrás.</p></div></section>
