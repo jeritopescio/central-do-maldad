@@ -148,7 +148,7 @@ const ICON = {
 
 /* ---------- state ---------- */
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
-function defaultUI(){ return {view:'hoy', calY:null, calM:null, calSel:null, mis:'jefe', misWho:'all', movF:'todo', achOpen:{}}; }
+function defaultUI(){ return {view:'hoy', calY:null, calM:null, calSel:null, mis:'todo', misWho:'all', misBoss:false, movF:'todo', achOpen:{}}; }
 function loadLocal(){ try{ return JSON.parse(localStorage.getItem(LKEY)) || {}; }catch(e){ return {}; } }
 function saveLocal(){ try{ localStorage.setItem(LKEY, JSON.stringify({me:S.me, ui:S.ui, splashDay:S.splashDay})); }catch(e){} }
 function loadDemo(){ try{ const s = JSON.parse(localStorage.getItem(DKEY)); return s && s.v===2 ? s : null; }catch(e){ return null; } }
@@ -285,7 +285,7 @@ function renderTop(){
   $('#who').innerHTML = Sync.live
     ? `<button class="av on" style="--c:${M[S.me].c}" data-act="members" aria-label="Ver a ${M[S.me].name} y la banda" title="${M[S.me].name}">${M[S.me].emoji}</button>`
     : IDS.map(id => `<button class="av ${S.me===id?'on':''}" style="--c:${M[id].c}" data-act="me" data-id="${id}" aria-pressed="${S.me===id}" aria-label="Soy ${M[id].name}" title="${M[id].name}">${M[id].emoji}</button>`).join('');
-  const items = [['hoy','Hoy'],['agenda','Calendario'],['misiones','Quests'],['caja','Caja'],['banda','Banda']];
+  const items = [['hoy','Hoy'],['agenda','Calendario'],['misiones','Quests'],['caja','Caja']];
   $('#nav').innerHTML = items.map(([v,l]) => `<button class="${S.ui.view===v?'on':''}" data-act="nav" data-v="${v}" ${S.ui.view===v?'aria-current="page"':''}>${ICON[v]}<span>${l}</span></button>`).join('') + `<p class="nav-brand">Central do Maldad${Sync.live ? '' : ' · demo'}</p>`;
   const pt = (r, a) => `${(Math.cos(a)*r).toFixed(1)} ${(Math.sin(a)*r).toFixed(1)}`;
   let rays = ''; for(let i=0;i<10;i++){ const a = i/10*Math.PI*2 - Math.PI/2; rays += `M${pt(19,a-.17)}L${pt(i%2 ? 41 : 48,a)}L${pt(19,a+.17)}Z`; }
@@ -295,50 +295,56 @@ function renderTop(){
 /* ---------- HOY ---------- */
 function renderHoy(){
   const L = lvl(S.xp), B = boss(), show = showEv();
-  const mine = S.tasks.filter(t => !t.done && (t.who===S.me || t.who==='all')).sort(byDue).slice(0,4);
-  const next = upcoming().slice(0,3);
-  const lit = IDS.filter(i => S.suns[i]).length;
+  const mine = S.tasks.filter(t => !t.done && (t.who===S.me || t.who==='all')).sort(byDue).slice(0,3);
+  let week = upcoming().filter(e => dd(e.date) <= 7), wkTitle = 'Esta semana';
+  if(!week.length){ week = upcoming().slice(0,2); wkTitle = 'Lo que viene'; }
+  week = week.slice(0,4);
+  const ask = week.find(e => !['deadline','lanz'].includes(e.type));
+  const lit = IDS.filter(i => S.suns[i]).length, myLit = S.suns[S.me];
+  const lg = S.movs.length ? ledger() : null, owed = lg ? settlePlan(lg.bal).length : 0;
   return `<div class="hoy">
     ${Sync.live ? '' : `<div class="proto o0"><b>DEMO</b><span>Lo que hagas queda solo en este celu. Cualquier cosa se deshace.</span> <button class="link" data-act="info">Qué es esto</button></div>`}
     <div class="col-a">
-      <section class="hero o1" aria-label="Cuenta regresiva al tercer show">
-        <canvas class="hero-art" aria-hidden="true"></canvas>
-        <img class="hero-inst i-bajo" src="img/bajo.webp" alt="" aria-hidden="true"><img class="hero-inst i-bata" src="img/bata.webp" alt="" aria-hidden="true"><img class="hero-inst i-guit" src="img/guitarra.webp" alt="" aria-hidden="true">
-        ${sun({size:118, seed:21, n:9, cls:'hero-sun'})}
-        <div class="hero-in">
-          <div class="kicker">${fmtShort(show.date).toUpperCase()} ${sun({size:11,seed:2})} ${show.time} HS ${sun({size:11,seed:4})} PURA VIDA</div>
-          <h1 class="hero-title">El tercer y último show de Evvil</h1>
-          <div class="count"><span class="num" data-days>–</span><span class="unit" data-unit>días</span><span class="clock" data-clock></span></div>
-          <p class="lineup">${show.with ? `junto a ${esc(show.with.split('. ')[0])}. ` : ''}Presentamos «Los Papás».</p>
-          <button class="btn ghost sm hero-go" data-act="event" data-id="e16">Ver el show</button>
-        </div>
-        <button class="boss-mini" data-act="nav" data-v="misiones">
-          <span class="bm-top"><span>Final Boss 2026: la promo del show</span><span>${B.done}/${B.n} quests</span></span>
-          <span class="hp"><i style="width:${(B.pct*100).toFixed(1)}%"></i></span>
-        </button>
-      </section>
-      <section class="card ritual o3">
-        <div class="r-head"><h2 class="h">Soles de hoy</h2><span class="tiny">${lit}/3 encendidos${lit===3?' · ¡Triple sol!':''}</span></div>
-        <div class="suns">${IDS.map(id => { const on = S.suns[id], mine = id===S.me; return `<button class="sunbtn ${on?'lit':''} ${mine?'mine':''}" style="--c:${M[id].c}" data-act="sun" data-id="${id}" ${(!mine||on)?'aria-disabled="true"':''} aria-label="Sol de ${M[id].name}: ${on?'encendido':'apagado'}"><span class="sw">${sun({size:64, seed:hash(id)%50, n:9})}<span class="se">${M[id].emoji}</span></span><span class="sn">${M[id].name}</span><span class="ss">${on?'encendido':(mine?'tocá para encender':'todavía no')}</span></button>`; }).join('')}</div>
-        <p class="tiny">Encender tu sol del día suma 5 XP. Si los tres lo encienden, la banda gana 15 XP más.</p>
-      </section>
-      <section class="card o4">
-        <div class="r-head"><h2 class="h">Tus quests <span class="h-sub">${M[S.me].emoji} ${M[S.me].name}</span></h2><button class="btn ghost sm" data-act="new-task">+ Quest</button></div>
-        ${mine.length ? `<ul class="tasks">${mine.map(taskRow).join('')}</ul>` : `<p class="empty">No tenés nada pendiente. Fijate si alguien necesita una mano en <button class="link" data-act="nav" data-v="misiones">Quests</button>.</p>`}
-        <button class="more" data-act="nav" data-v="misiones">Todas las quests</button>
+      <button class="showstrip o1" data-act="event" data-id="${show.id}" aria-label="Ver el tercer show">
+        <span class="ss-count"><b data-days>–</b><small data-unit>días</small></span>
+        <span class="ss-body"><span class="kicker">${fmtShort(show.date).toUpperCase()} · ${(show.time || '').replace(':00', '')} HS · ${esc((show.place || '').split(',')[0].toUpperCase())}</span>
+          <span class="ss-title">El tercer y último show</span>
+          <span class="ss-boss"><span class="hp"><i style="width:${(B.pct*100).toFixed(1)}%"></i></span><span>Boss ${B.done}/${B.n}</span></span></span>
+        ${ICON.next}
+      </button>
+      <section class="card o2">
+        <div class="r-head"><h2 class="h">${wkTitle}</h2><button class="more-link" data-act="nav" data-v="agenda">Ver calendario</button></div>
+        ${week.length ? `<ul class="evlist">${week.map(e => e===ask ? askRow(e) : evRow(e)).join('')}</ul>` : '<p class="empty">No hay nada agendado.</p>'}
       </section>
     </div>
     <div class="col-b">
-      ${statusHTML(L, 'o2')}
-      <section class="card o5"><h2 class="h">Lo que viene</h2><ul class="evlist">${next.map(evRow).join('')}</ul><button class="more" data-act="nav" data-v="agenda">Ver agenda</button></section>
-      <section class="card o6"><h2 class="h">En la banda</h2><ul class="feed">${S.feed.slice(0,6).map(feedRow).join('')}</ul></section>
+      <section class="card o3">
+        <div class="r-head"><h2 class="h">Tus quests</h2><button class="more-link" data-act="nav" data-v="misiones" data-mis="todo">Ver todas</button></div>
+        ${mine.length ? `<ul class="tasks">${mine.map(taskRow).join('')}</ul>` : `<p class="empty">No tenés nada pendiente. Fijate si alguien necesita una mano en <button class="link" data-act="nav" data-v="misiones" data-mis="todo">Quests</button>.</p>`}
+      </section>
+      <section class="card cajamini o4">
+        <button class="cm-main" data-act="nav" data-v="caja"><span class="eyebrow">Caja común</span><span class="cm-money">${lg ? money(lg.caja) : '—'}</span>
+          <span class="tiny">${!lg ? 'Esperando el Excel de Mica' : owed ? `${owed} ${owed===1?'cuenta':'cuentas'} para saldar` : 'Caja en orden'}</span></button>
+        <div class="cm-btns"><button class="btn sm" data-act="new-mov" data-k="gasto">+ Gasto</button><button class="btn ghost sm" data-act="new-mov" data-k="ingreso">+ Ingreso</button></div>
+      </section>
+      <section class="card gameline o5">
+        <button class="gl-lvl" data-act="nav" data-v="banda" aria-label="Ver el Levvel de la banda">
+          <span class="lvl-badge">${sun({size:44, seed:7, n:10})}<span>${L.n}</span></span>
+          <span class="gl-body"><b>${esc(L.name)}</b><span class="xpbar"><i style="width:${(L.pct*100).toFixed(1)}%"></i></span>
+            <span class="tiny">${S.lives}/7 vvidas · soles ${lit}/3 · ${num(S.xp-L.from)}/${num(L.to-L.from)} XP</span></span>
+        </button>
+        <button class="gl-sun ${myLit?'lit':''}" style="--c:${M[S.me].c}" data-act="sun" data-id="${S.me}" ${myLit?'aria-disabled="true"':''} aria-label="Tu sol de hoy: ${myLit?'encendido':'apagado'}">${sun({size:30, seed:hash(S.me)%50, n:9})}<span>${myLit?'Encendido':'Tu sol'}</span></button>
+      </section>
     </div>
   </div>`;
 }
-function statusHTML(L, cls=''){
+function askRow(e){
+  return `<li class="ev-ask">${evBtn(e)}<div class="ask-row">${Object.keys(RS).map(k => `<button class="pill ${e.rsvp?.[S.me]===k?'on':''}" data-act="rsvp" data-id="${e.id}" data-k="${k}" aria-pressed="${e.rsvp?.[S.me]===k}">${RS[k]}</button>`).join('')}</div></li>`;
+}
+function statusHTML(L, cls='', size=84){
   const wc = weekCount();
   return `<section class="card status ${cls}">
-    <div class="lvl-badge">${sun({size:84, seed:7, n:10})}<span>${L.n}</span></div>
+    <div class="lvl-badge">${sun({size, seed:7, n:10})}<span>${L.n}</span></div>
     <div><div class="eyebrow">Levvel de la banda</div><div class="lvl-name">${esc(L.name)}</div>
       <div class="xpbar" role="progressbar" aria-valuemin="0" aria-valuemax="${L.to-L.from}" aria-valuenow="${S.xp-L.from}"><i style="width:${(L.pct*100).toFixed(1)}%"></i></div>
       <div class="tiny"><b>${num(S.xp-L.from)}</b> / ${num(L.to-L.from)} XP para «${esc(L.next || 'el infinito')}»</div></div>
@@ -356,12 +362,13 @@ function taskRow(t){
     <span class="xp">+${t.xp}<span class="xp-s">XP</span></span>
   </li>`;
 }
-function evRow(e){
+function evRow(e){ return `<li>${evBtn(e)}</li>`; }
+function evBtn(e){
   const d = pd(e.date), T = ET[e.type];
-  return `<li><button class="ev" data-act="event" data-id="${e.id}" style="--tc:${T.c}">
+  return `<button class="ev" data-act="event" data-id="${e.id}" style="--tc:${T.c}">
     <span class="ev-date"><b>${d.getDate()}</b><small>${DOW[d.getDay()]}</small></span>
     <span class="ev-body"><span class="ev-type">${T.label}${e.time?` · ${e.time} hs`:''}</span><span class="ev-title">${esc(e.title)}</span>${e.notes?.length ? `<span class="ev-notes">${e.notes.length} ${e.notes.length===1?'nota':'notas'} · ${e.notes.map(n => M[n.who].emoji).join(' ')}</span>` : ''}</span>
-    <span class="ev-when">${dueTxt(e.date)}</span></button></li>`;
+    <span class="ev-when">${dueTxt(e.date)}</span></button>`;
 }
 function feedRow(f){
   const band = f.who==='band';
@@ -400,36 +407,36 @@ function renderAgenda(){
 }
 
 /* ---------- MISIONES ---------- */
+const MIS_TABS = [['todo','Por hacer'],['hechas','Hechas'],['singles','Singles'],['convocatorias','Convocatorias']];
 function renderMisiones(){
-  const tabs = [['jefe','Final Boss'],['singles','Singles'],['contenido','Contenido'],['produccion','Producción'],['convocatorias','Convocatorias']];
+  if(!MIS_TABS.some(([k]) => k===S.ui.mis)) S.ui.mis = 'todo';
   let body = '';
-  const w = S.ui.misWho;
-  const filt = list => list.filter(t => w==='all' || t.who===w || t.who==='all');
-  const filters = `<div class="filters">${[['all','Todos'],...IDS.map(i => [i, `${M[i].emoji} ${M[i].name}`])].map(([k,l]) => `<button class="fchip ${w===k?'on':''}" data-act="mis-who" data-k="${k}">${l}</button>`).join('')}</div>`;
-  const lists = list => { const p = filt(list.filter(t => !t.done)).sort(byDue), d = filt(list.filter(t => t.done)); return `
-    <section class="card"><h2 class="h">Por hacer <span class="h-sub">${p.length}</span></h2>${filters}${p.length ? `<ul class="tasks">${p.map(taskRow).join('')}</ul>` : '<p class="empty">Nada pendiente acá.</p>'}</section>
-    <section class="card"><h2 class="h">Hechas <span class="h-sub">${d.length}</span></h2>${d.length ? `<ul class="tasks">${d.map(taskRow).join('')}</ul>` : '<p class="empty">Todavía ninguna.</p>'}</section>`; };
-  if(S.ui.mis==='jefe'){
-    const B = boss();
-    body = `<section class="card bosscard"><div>${bossSVG(B.pct)}</div><div style="min-width:0"><div class="eyebrow">Final Boss 2026 · sáb 19 dic</div><h2 class="h">La promo del tercer show</h2>
+  const w = S.ui.misWho, onlyBoss = !!S.ui.misBoss, B = boss();
+  const filt = list => list.filter(t => (w==='all' || t.who===w || t.who==='all') && (!onlyBoss || t.boss));
+  const filters = `<div class="filters">${[['all','Todos'],...IDS.map(i => [i, `${M[i].emoji} ${M[i].name}`])].map(([k,l]) => `<button class="fchip ${w===k?'on':''}" data-act="mis-who" data-k="${k}">${l}</button>`).join('')}<button class="fchip boss ${onlyBoss?'on':''}" data-act="mis-boss" aria-pressed="${onlyBoss}">Boss 19/12</button></div>`;
+  const bossTop = onlyBoss
+    ? `<section class="card bosscard"><div>${bossSVG(B.pct)}</div><div style="min-width:0"><div class="eyebrow">Final Boss 2026 · sáb 19 dic</div><h2 class="h">La promo del tercer show</h2>
       <div class="hp big"><i style="width:${(B.pct*100).toFixed(1)}%"></i></div>
-      <p class="tiny" style="margin-top:8px">Le quedan <b style="color:var(--bone)">${B.left}</b> de ${B.tot} HP. Cada quest cerrada le pega. Si lo derrotan antes del show, la banda gana 300 XP.</p></div></section>
-      <div class="mis-grid two">${lists(S.tasks.filter(t => t.boss))}</div>`;
+      <p class="tiny" style="margin-top:8px">Le quedan <b style="color:var(--bone)">${B.left}</b> de ${B.tot} HP. Cada quest cerrada le pega. Si lo derrotan antes del show, la banda gana 300 XP.</p></div></section>`
+    : `<button class="bossbar" data-act="mis-boss"><span class="bm-top"><span>Final Boss 2026: la promo del show</span><span>${B.done}/${B.n} quests</span></span><span class="hp"><i style="width:${(B.pct*100).toFixed(1)}%"></i></span></button>`;
+  const grp = (title, list) => list.length ? `<h2 class="grp">${title} <span>${list.length}</span></h2><ul class="tasks">${list.map(taskRow).join('')}</ul>` : '';
+  if(S.ui.mis==='todo'){
+    const p = filt(S.tasks.filter(t => !t.done)).sort(byDue);
+    body = `${bossTop}<section class="card">${filters}${p.length ? grp('Esta semana', p.filter(t => dd(t.due) <= 7)) + grp('Más adelante', p.filter(t => dd(t.due) > 7)) : '<p class="empty">Nada pendiente acá.</p>'}</section>`;
+  } else if(S.ui.mis==='hechas'){
+    const d = filt(S.tasks.filter(t => t.done)).sort((a,b) => b.due.localeCompare(a.due));
+    body = `<section class="card">${filters}${d.length ? `<ul class="tasks">${d.map(taskRow).join('')}</ul>` : '<p class="empty">Todavía ninguna.</p>'}</section>`;
   } else if(S.ui.mis==='singles'){
     const main = S.songs.filter(s => s.note), lata = S.songs.filter(s => !s.note);
     body = `<div class="songs">${main.map(songCard).join('')}</div>
       <section class="card" style="margin-top:16px"><h2 class="h">En la lata <span class="h-sub">${lata.length} temas grabados esperando su turno</span></h2><div class="lata">${lata.map(s => `<span>${esc(s.name)}</span>`).join('')}</div></section>`;
-  } else if(S.ui.mis==='contenido'){
-    body = `<div class="mis-grid two">${lists(S.tasks.filter(t => t.cat==='contenido'))}</div>`;
-  } else if(S.ui.mis==='produccion'){
-    body = `<div class="mis-grid two">${lists(S.tasks.filter(t => t.cat==='produccion'))}</div>`;
   } else {
     body = `<section class="card radar"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="32" cy="32" r="28" opacity=".35"/><circle cx="32" cy="32" r="18" opacity=".55"/><circle cx="32" cy="32" r="8"/><path d="M32 32 52 14" stroke-width="3" stroke-linecap="round"/><circle cx="45" cy="22" r="3" fill="currentColor"/><circle cx="20" cy="42" r="2.5" fill="currentColor" opacity=".7"/></svg>
       <div><h2 class="h" style="margin-bottom:6px">Radar de convocatorias</h2><p>Cada semana Claude busca fondos, festivales, concursos y ciclos abiertos y los carga acá con su fecha de cierre. Los pasos se pueden mover para adelante y para atrás.</p></div></section>
       <div class="calls" style="margin-top:16px">${S.calls.slice().sort((a,b) => (a.close||'9999').localeCompare(b.close||'9999')).map(callCard).join('') || '<p class="empty">No hay convocatorias cargadas.</p>'}</div>`;
   }
   return `<div class="mis-top"><h1 class="h">Quests</h1><button class="btn sm" data-act="new-task">+ Nueva quest</button></div>
-    <div class="tabs" role="tablist">${tabs.map(([k,l]) => `<button class="tab ${S.ui.mis===k?'on':''}" role="tab" aria-selected="${S.ui.mis===k}" data-act="mis-tab" data-k="${k}">${l}</button>`).join('')}</div>${body}`;
+    <div class="tabs" role="tablist">${MIS_TABS.map(([k,l]) => `<button class="tab ${S.ui.mis===k?'on':''}" role="tab" aria-selected="${S.ui.mis===k}" data-act="mis-tab" data-k="${k}">${l}</button>`).join('')}</div>${body}`;
 }
 function bossSVG(pct){
   const eye = (cx) => { let r = ''; for(let i=0;i<9;i++){ const a = i/9*Math.PI*2; r += `<line x1="${(cx+Math.cos(a)*8).toFixed(1)}" y1="${(-6+Math.sin(a)*6).toFixed(1)}" x2="${(cx+Math.cos(a)*12.5).toFixed(1)}" y2="${(-6+Math.sin(a)*10).toFixed(1)}" stroke="#ffc2d0" stroke-width="1.6" stroke-linecap="round"/>`; } return r + `<ellipse cx="${cx}" cy="-6" rx="7" ry="4.6" fill="#fff"/><circle cx="${cx}" cy="-6" r="2.4" fill="#1a0510"/>`; };
@@ -517,13 +524,12 @@ function renderBanda(){
     ['17 oct 2026','Espantoctubre x Batalla de Videos'],['28 oct 2026','Master de «Los Papás»'],['Oct 2026','Arranca la Central do Maldad · levvel 0'],
   ];
   return `<div class="banda">
-    <section class="card lvlcard wide"><div class="lvl-badge">${sun({size:120, seed:7, n:10})}<span>${L.n}</span></div>
-      <div style="min-width:0"><div class="eyebrow">Evvil · levvel ${L.n}</div><div class="lvl-name">${esc(L.name)}</div><div class="xpbar"><i style="width:${(L.pct*100).toFixed(1)}%"></i></div>
-      <div class="tiny" style="margin-top:6px"><b style="color:var(--bone)">${num(S.xp)} XP</b> en total · faltan ${num(Math.max(0, L.to-S.xp))} para «${esc(L.next||'—')}». El levvel 0 es el día que arrancamos la Central.</div></div></section>
+    ${statusHTML(L, 'lvlcard wide', 120)}
     <section class="card wide gamecard"><div><h2 class="h">Aplastá solcitos</h2><p class="tiny" style="margin:2px 0 0">Pasatiempo: no da XP, pero cuenta para los achievvilments. La banda ya aplastó <b style="color:var(--bone)">${num(sumStat('squash'))}</b>. Tu récord: <b style="color:var(--bone)">${num((S.stats[S.me]||{}).best || 0)}</b>.</p></div><button class="btn" data-act="game">Jugar</button></section>
     <section class="card wide"><div class="r-head"><h2 class="h">Achievvilments <span class="h-sub">${on} de ${ACH.length} unlocked</span></h2><button class="mini-link" data-act="ach-all">${ARISTAS.every(a => S.ui.achOpen[a.id]) ? 'Cerrar todo' : 'Abrir todo'}</button></div>
       <p class="tiny" style="margin:-4px 0 12px">Algunos se desbloquean solos y otros los marca cualquiera de los tres. Las métricas de redes aparecen solo cuando cruzan un hito, nunca como meta.</p>
       <div class="achs">${ARISTAS.map(achCatHTML).join('')}</div></section>
+    <section class="card"><h2 class="h">En la banda</h2>${S.feed.length ? `<ul class="feed">${S.feed.slice(0,8).map(feedRow).join('')}</ul>` : '<p class="empty">Todavía no pasó nada.</p>'}</section>
     <section class="card"><h2 class="h">Evvolución</h2><ol class="timeline">${hist.map(([w,t,img,kind]) => `<li><div class="tw">${w}</div><div class="tt">${t}</div>${img ? `<button class="tl-img ${kind || ''}" data-act="img" data-src="${img}" aria-label="Ver imagen: ${esc(t)}"><img src="${img}" alt="" loading="lazy"></button>` : ''}</li>`).join('')}
       <li class="now"><div class="tw">Hoy</div><div class="tt">Levvel ${L.n} · ${esc(L.name)}</div></li>
       <li class="fut"><div class="tw">19 dic 2026</div><div class="tt">El tercer y último show de Evvil</div></li></ol>
@@ -573,14 +579,20 @@ function weeklyText(){
 
 /* ---------- sheets ---------- */
 let sheetFn = null;
-function openSheet(fn){ sheetFn = fn; const s = $('#sheet'); s.hidden = false; s.innerHTML = `<div class="sheet-panel" role="dialog" aria-modal="true"><button class="sh-close" data-act="close" aria-label="Cerrar">${ICON.close}</button><div id="sheet-body">${fn()}</div></div>`; setTimeout(() => s.querySelector('input,textarea,.sh-close')?.focus(), 60); }
-function refreshSheet(){ if(sheetFn && !$('#sheet').hidden) $('#sheet-body').innerHTML = sheetFn(); }
+function openSheet(fn){ sheetFn = fn; const s = $('#sheet'); s.hidden = false; s.innerHTML = `<div class="sheet-panel" role="dialog" aria-modal="true"><button class="sh-close" data-act="close" aria-label="Cerrar">${ICON.close}</button><div id="sheet-body">${fn()}</div></div>`; sheetArt(); setTimeout(() => s.querySelector('input,textarea,.sh-close')?.focus(), 60); }
+function refreshSheet(){ if(sheetFn && !$('#sheet').hidden){ $('#sheet-body').innerHTML = sheetFn(); sheetArt(); } }
+function sheetArt(){ tick(); requestAnimationFrame(drawHero); }
 function closeSheet(){ const s = $('#sheet'); s.hidden = true; s.innerHTML = ''; sheetFn = null; }
 const RS = {voy:'Voy', tarde:'Llego tarde', no:'No puedo'};
 function evSheet(id){
   const e = S.events.find(x => x.id===id); if(!e) return '<p class="empty">Ese evento ya no existe.</p>';
   const T = ET[e.type], d = pd(e.date, e.time), canGo = !['deadline','lanz'].includes(e.type);
-  return `<div class="sh-head" style="--tc:${T.c}"><div class="chips"><span class="chip type">${T.label}</span><span class="chip">${dueTxt(e.date)}</span></div><h2 class="sh-title">${esc(e.title)}</h2>
+  return `${e.id==='e16' ? `<section class="hero sh-hero" aria-label="Cuenta regresiva al tercer show">
+      <canvas class="hero-art" aria-hidden="true"></canvas>
+      <img class="hero-inst i-bajo" src="img/bajo.webp" alt="" aria-hidden="true"><img class="hero-inst i-bata" src="img/bata.webp" alt="" aria-hidden="true"><img class="hero-inst i-guit" src="img/guitarra.webp" alt="" aria-hidden="true">
+      ${sun({size:118, seed:21, n:9, cls:'hero-sun'})}
+      <div class="hero-in"><div class="kicker">Faltan</div><div class="count"><span class="num" data-days>–</span><span class="unit" data-unit>días</span><span class="clock" data-clock></span></div></div>
+    </section>` : ''}<div class="sh-head" style="--tc:${T.c}"><div class="chips"><span class="chip type">${T.label}</span><span class="chip">${dueTxt(e.date)}</span></div><h2 class="sh-title">${esc(e.title)}</h2>
     <p class="sh-sub">${DOWL[d.getDay()]} ${d.getDate()} de ${MONL[d.getMonth()]}${e.time?` · ${e.time} hs`:''}${e.place?` · ${esc(e.place)}`:''}</p>${e.with?`<p class="sh-sub">Junto a ${esc(e.with)}</p>`:''}</div>
     ${canGo ? `<div class="sh-sec"><h3 class="sh-h">¿Vas?</h3><div class="pills">${Object.keys(RS).map(k => `<button class="pill ${e.rsvp?.[S.me]===k?'on':''}" data-act="rsvp" data-id="${e.id}" data-k="${k}" aria-pressed="${e.rsvp?.[S.me]===k}">${RS[k]}</button>`).join('')}</div>
       <div class="att">${IDS.map(i => `<span>${M[i].emoji} ${M[i].name}: <b>${e.rsvp?.[i] ? RS[e.rsvp[i]] : 'sin responder'}</b></span>`).join('')}</div></div>` : ''}
@@ -702,12 +714,13 @@ function drawHero(){
   for(let i=0;i<w*2.2;i++){ const x = R()*w, y = wave(x) + 10 + R()*(h - wave(x)), a = R()*Math.PI*2, L = 2 + R()*6; g.strokeStyle = cols[(R()*cols.length)|0]; g.lineWidth = .7; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a)*L, y + Math.sin(a)*L); g.stroke(); }
 }
 function tick(){
-  const el = document.querySelector('[data-days]'); if(!el) return;
+  if(!document.querySelector('[data-days]')) return;
+  const set = (sel, txt) => document.querySelectorAll(sel).forEach(el => el.textContent = txt);
   const show = showEv(), ms = pd(show.date, show.time) - Date.now();
-  if(ms <= 0){ el.textContent = '¡Hoy!'; document.querySelector('[data-unit]').textContent = ''; document.querySelector('[data-clock]').textContent = ''; return; }
+  if(ms <= 0){ set('[data-days]', '¡Hoy!'); set('[data-unit]', ''); set('[data-clock]', ''); return; }
   const d = Math.floor(ms/864e5), hh = Math.floor(ms%864e5/36e5), mm = Math.floor(ms%36e5/6e4), ss = Math.floor(ms%6e4/1e3), p = v => String(v).padStart(2,'0');
-  el.textContent = d; document.querySelector('[data-unit]').textContent = d===1 ? 'día' : 'días';
-  document.querySelector('[data-clock]').textContent = `y ${p(hh)} h ${p(mm)} min ${p(ss)} s`;
+  set('[data-days]', d); set('[data-unit]', d===1 ? 'día' : 'días');
+  set('[data-clock]', `y ${p(hh)} h ${p(mm)} min ${p(ss)} s`);
 }
 
 /* ---------- render ---------- */
@@ -716,13 +729,13 @@ function render(){
   recalc();
   renderTop();
   $('#view').innerHTML = VIEWS[S.ui.view]();
-  if(S.ui.view==='hoy'){ requestAnimationFrame(drawHero); tick(); }
+  tick();
 }
 function rerender(){ const y = scrollY; render(); scrollTo(0, y); }
 
 /* ---------- actions ---------- */
 const A = {
-  nav(b){ S.ui.view = b.dataset.v; try{ history.replaceState(null, '', '#'+S.ui.view); }catch(e){} save(); render(); scrollTo(0, 0); },
+  nav(b){ S.ui.view = b.dataset.v; if(b.dataset.mis) S.ui.mis = b.dataset.mis; try{ history.replaceState(null, '', '#'+S.ui.view); }catch(e){} save(); render(); scrollTo(0, 0); },
   me(b){ S.me = b.dataset.id; save(); rerender(); toast(`«${pick(M[S.me].says)}» · ${M[S.me].name} ${M[S.me].emoji}`); },
   info(){ openSheet(infoSheet); },
   close(){ closeSheet(); },
@@ -770,6 +783,7 @@ const A = {
   'cal-day'(b){ S.ui.calSel = b.dataset.d; const d = pd(b.dataset.d); S.ui.calM = d.getMonth(); S.ui.calY = d.getFullYear(); save(); rerender(); },
   'mis-tab'(b){ S.ui.mis = b.dataset.k; save(); rerender(); },
   'mis-who'(b){ S.ui.misWho = b.dataset.k; save(); rerender(); },
+  'mis-boss'(){ S.ui.misBoss = !S.ui.misBoss; S.ui.mis = 'todo'; save(); rerender(); },
   'mov-f'(b){ S.ui.movF = b.dataset.k; save(); rerender(); },
   add(){ openSheet(addSheet); },
   'new-task'(){ openSheet(taskForm); },

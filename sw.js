@@ -1,6 +1,6 @@
 /* Guarda la app en el celu para que abra rápido y sin señal. Los datos viajan aparte (Supabase). */
-const CACHE = 'cdm-v7';
-const SHELL = ['./', 'index.html', 'css/app.css?v=7', 'js/config.js?v=7', 'js/app.js?v=7', 'js/milktoy.js?v=7', 'js/game.js?v=7', 'js/sync.js?v=7', 'manifest.webmanifest', 'fonts/evvil-regular.woff',
+const CACHE = 'cdm-v8';
+const SHELL = ['./', 'index.html', 'css/app.css?v=8', 'js/config.js?v=8', 'js/app.js?v=8', 'js/milktoy.js?v=8', 'js/game.js?v=8', 'js/sync.js?v=8', 'manifest.webmanifest', 'fonts/evvil-regular.woff',
   'img/evvil.svg', 'img/cosito.webp', 'img/fondo.jpg', 'img/jero.webp', 'img/mica.webp', 'img/fran.webp', 'img/bajo.webp', 'img/bata.webp', 'img/guitarra.webp',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 const CACHEABLE = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdn.jsdelivr.net'];
