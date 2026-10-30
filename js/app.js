@@ -229,7 +229,9 @@ function unlock(id){
   const d = new Date(); S.ach[id] = `${d.getDate()} ${MON[d.getMonth()]} ${d.getFullYear()}`; save();
   queueOverlay(`<div class="ov-sun" style="width:150px;height:150px">${sun({size:150, seed:hash(id)%97, n:12})}<b style="font-size:50px">${a.ic}</b></div><div class="ov-k">Achievvilment unlocked</div><h2 class="ov-t">${esc(a.name)}</h2><p class="ov-d">${esc(a.desc)}</p>`);
 }
+const CARTAS = [1,2,3,4,5,6,7,8,9];
 function levelHTML(L){
+  if(CARTAS.includes(L.n)) return `<img class="ov-carta" src="img/cartas/carta${L.n}.webp" alt="Carta ${L.n} del álbum"><div class="ov-k">LEVVEL UP! · NUEVA CARTA</div><h2 class="ov-t">${esc(L.name)}</h2><p class="ov-d">Lo desbloquearon entre los tres. La carta ya está en el álbum, en Banda.</p>`;
   return `<div class="ov-sun">${sun({size:180, seed:L.n+40, n:11})}<b>${L.n}</b></div><div class="ov-k">LEVVEL UP!</div><h2 class="ov-t">${esc(L.name)}</h2><p class="ov-d">Lo desbloquearon entre los tres. Próximo: «${esc(L.next || '—')}».</p>`;
 }
 const OVQ = [];
@@ -265,6 +267,7 @@ function toast(msg){
   toastT = setTimeout(() => t.classList.remove('on', 'has-undo'), u ? Math.max(2800, UNDO.until - Date.now()) : 2800);
 }
 function pick(list){ return list[Math.floor(Math.random()*list.length)]; }
+function shuffled(list){ const a = list.slice(); for(let i = a.length-1; i > 0; i--){ const j = Math.floor(Math.random()*(i+1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 function posOf(ev, el){
   if(ev && ev.clientX) return {x:ev.clientX, y:ev.clientY};
   const r = el.getBoundingClientRect(); return {x:r.left + r.width/2, y:r.top + r.height/2};
@@ -517,6 +520,7 @@ function renderBanda(){
   ];
   return `<div class="banda">
     ${statusHTML(L, 'lvlcard wide', 120)}
+    ${albumHTML(L)}
     <section class="card wide gamecard"><div><h2 class="h">Aplastá solcitos</h2><p class="tiny" style="margin:2px 0 0">Pasatiempo: no da XP, pero cuenta para los achievvilments. La banda ya aplastó <b style="color:var(--bone)">${num(sumStat('squash'))}</b>. Tu récord: <b style="color:var(--bone)">${num((S.stats[S.me]||{}).best || 0)}</b>.</p></div><button class="btn" data-act="game">Jugar</button></section>
     <section class="card wide"><div class="r-head"><h2 class="h">Achievvilments <span class="h-sub">${on} de ${ACH.length} unlocked</span></h2><button class="mini-link" data-act="ach-all">${ARISTAS.every(a => S.ui.achOpen[a.id]) ? 'Cerrar todo' : 'Abrir todo'}</button></div>
       <p class="tiny" style="margin:-4px 0 12px">Algunos se desbloquean solos y otros los marca cualquiera de los tres. Las métricas de redes aparecen solo cuando cruzan un hito, nunca como meta.</p>
@@ -542,6 +546,14 @@ function renderBanda(){
       <p class="tiny" style="margin-top:10px">Todos los lunes la app arma este parte. Un toque y lo mandás al grupo.</p></section>
     <section class="card wide"><div class="row" style="justify-content:space-between"><button class="link" data-act="info">Qué es la Central</button>${Sync.live ? `<span class="tiny">Este celu es de ${M[S.me].name} ${M[S.me].emoji} · <button class="mini-link" data-act="whoami">Cambiar</button></span>` : '<button class="btn ghost sm" data-act="reset" id="reset-btn">Reiniciar demo</button>'}</div></section>
   </div>`;
+}
+function albumHTML(L){
+  const got = CARTAS.filter(n => n <= L.n).length;
+  return `<section class="card wide album"><div class="r-head"><h2 class="h">Álbum Evvil <span class="h-sub">${got} de ${CARTAS.length} cartas</span></h2></div>
+    <p class="tiny" style="margin:-4px 0 12px">Cada Levvel nuevo da vuelta una carta. Tocala para verla grande.</p>
+    <div class="cartas">${CARTAS.map(n => n <= L.n
+      ? `<button class="carta" data-act="img" data-src="img/cartas/carta${n}.webp" aria-label="Ver la carta ${n}"><img src="img/cartas/carta${n}-s.webp" alt="" loading="lazy"></button>`
+      : `<button class="carta back" data-act="carta-lock" data-n="${n}" aria-label="Carta ${n}: se da vuelta en el Levvel ${n}">${sun({size:46, seed:n*7+3, n:9})}<span>Levvel ${n}</span></button>`).join('')}</div></section>`;
 }
 function achCatHTML(ar){
   const list = ACH.filter(a => a.ar===ar.id), on = list.filter(a => S.ach[a.id]).length, open = !!S.ui.achOpen[ar.id];
@@ -824,6 +836,7 @@ const A = {
     if(PILL.length >= 5 && window.MilkToy){ PILL.length = 0; unlock('ordenador'); MilkToy.appear(MILK); }
   },
   img(b){ const src = b.dataset.src; openSheet(() => imgSheet(src)); },
+  'carta-lock'(b){ toast(`Esta carta se da vuelta en el Levvel ${b.dataset.n}`); },
   'ach-cat'(b){ const k = b.dataset.k; S.ui.achOpen[k] = !S.ui.achOpen[k]; saveLocal(); rerender(); },
   'ach-all'(){ const all = ARISTAS.every(a => S.ui.achOpen[a.id]); ARISTAS.forEach(a => S.ui.achOpen[a.id] = !all); saveLocal(); rerender(); },
   whoami(){ Sync.pickMember(); },
@@ -927,6 +940,7 @@ function maybeSplash(){
     <div class="sp-top"><img class="sp-letras" src="img/evvil.svg" alt="Evvil"><h1 class="sp-title">Central do Maldad</h1></div>
     <button class="sp-sun" data-act="enter" aria-label="Entrar a la Central"><img src="img/cosito.webp" alt=""></button>
     <p class="sp-hint">Tocá el sol para entrar</p>
+    ${shuffled(CARTAS).slice(0, 3).map((n, i) => `<img class="sp-card c${i+1}" src="img/cartas/carta${n}.webp" alt="">`).join('')}
     <img class="sp-fly f1" src="img/guitarra.webp" alt=""><img class="sp-fly f2" src="img/bata.webp" alt=""><img class="sp-fly f3" src="img/bajo.webp" alt="">
     <div class="sp-band"><img class="sp-m sp-mica" src="img/mica.webp" alt=""><img class="sp-m sp-jero" src="img/jero.webp" alt=""><img class="sp-m sp-fran" src="img/fran.webp" alt=""></div>`;
   sp.hidden = false; sp.className = 'splash';
