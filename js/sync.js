@@ -3,7 +3,8 @@
    Sin configuración, la app arranca en modo demo y guarda todo en este dispositivo. */
 (function(){
   const C = window.CDM_CONFIG || {};
-  const live = !!(C.supabaseUrl && C.supabaseAnonKey);
+  // ?demo en la dirección fuerza el modo demo (para probar sin tocar la base de la banda).
+  const live = !!(C.supabaseUrl && C.supabaseAnonKey) && !/(^|[?&])demo(&|=|$)/.test(location.search);
   const Sync = window.Sync = {live, client:null, rows:new Map()};
   const KIND = {task:'tasks', song:'songs', event:'events', mov:'movs', call:'calls', feed:'feed', xp:'xpl', sun:'sunLog'};
   // Compara sin importar el orden de los campos (la base los reordena).

@@ -1,6 +1,6 @@
 /* Guarda la app en el celu para que abra rápido y sin señal. Los datos viajan aparte (Supabase). */
-const CACHE = 'cdm-v4';
-const SHELL = ['./', 'index.html', 'css/app.css', 'js/config.js', 'js/app.js', 'js/milktoy.js', 'js/game.js', 'js/sync.js', 'manifest.webmanifest', 'fonts/evvil-regular.woff',
+const CACHE = 'cdm-v7';
+const SHELL = ['./', 'index.html', 'css/app.css?v=7', 'js/config.js?v=7', 'js/app.js?v=7', 'js/milktoy.js?v=7', 'js/game.js?v=7', 'js/sync.js?v=7', 'manifest.webmanifest', 'fonts/evvil-regular.woff',
   'img/evvil.svg', 'img/cosito.webp', 'img/fondo.jpg', 'img/jero.webp', 'img/mica.webp', 'img/fran.webp', 'img/bajo.webp', 'img/bata.webp', 'img/guitarra.webp',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 const CACHEABLE = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdn.jsdelivr.net'];
@@ -13,7 +13,12 @@ self.addEventListener('fetch', e => {
   const req = e.request, url = new URL(req.url);
   if(req.method !== 'GET') return;
   if(url.origin !== location.origin && !CACHEABLE.includes(url.hostname)) return;
-  // Muestra lo guardado al toque y actualiza en segundo plano.
+  // La página siempre se busca primero en internet, así las actualizaciones llegan al toque.
+  if(req.mode === 'navigate'){
+    e.respondWith(fetch(req).then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); return res; }).catch(() => caches.match(req).then(r => r || caches.match('index.html'))));
+    return;
+  }
+  // El resto: lo guardado al toque y actualiza en segundo plano.
   e.respondWith(caches.open(CACHE).then(async cache => {
     const hit = await cache.match(req);
     const net = fetch(req).then(res => { if(res.ok || res.type === 'opaque') cache.put(req, res.clone()); return res; }).catch(() => hit);

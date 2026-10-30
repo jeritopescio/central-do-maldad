@@ -24,7 +24,10 @@ const ACH = [
   {id:'master2',ar:'musica',ic:'🎚️',name:'Master en mano',desc:'«Los Papás» masterizado por Fermín Irigoyen.'},
   {id:'doble',ar:'musica',ic:'⚔️',name:'Doble filo',desc:'Dos singles OUT.',hint:'Se desbloquea solo cuando «Los Papás» pasa a OUT.',prog:'out',goal:2},
   {id:'disco',ar:'musica',ic:'👑',name:'Evvil, Evvil, Evvil',desc:'Los 11 temas publicados.',prog:'out',goal:11},
-  {id:'mugre',ar:'escenario',ic:'🧼',name:'Debut eVVil',desc:'Primer show como eVVil: Festival Mugre o Muerte, en Fábrica Cita.'},
+  {id:'formica',ar:'escenario',ic:'🐜',name:'Evil Formica',desc:'Antes de Evvil fuimos Evil Formica, con los temas de Fran.'},
+  {id:'colapso',ar:'escenario',ic:'🐼',name:'Casa Únclan',desc:'Viernes 21 de marzo con Colapso y Ortiba, todavía como Evil Formica.'},
+  {id:'mugre',ar:'escenario',ic:'🧼',name:'Debut eVVil',desc:'Primer show como Evvil (ex Fórmica): Festival Mugre o Muerte, en Fábrica Cita.'},
+  {id:'verano',ar:'escenario',ic:'🌞',name:'Un Verano',desc:'Ciclo Un Verano en Guajira, con Ortiba y No Me Toques.'},
   {id:'gatos',ar:'escenario',ic:'🐈',name:'Ciudad de Gatos',desc:'Fecha junto a Mister y Los Misterios.'},
   {id:'show1',ar:'escenario',ic:'1️⃣',name:'El primer show de Evvil',desc:'Pura Vida, junto a Poderes Extraños.'},
   {id:'bloques',ar:'escenario',ic:'🧱',name:'Bloques Irreconciliables',desc:'Domingo en Pura Vida junto a Bloques Irreconciliables.'},
@@ -70,7 +73,10 @@ const ACH = [
   {id:'exterminador',ar:'juego',ic:'💥',name:'Exterminador solar',desc:'Matá 1.000 solcitos.',prog:'squash',goal:1000},
   {id:'apocalipsis',ar:'juego',ic:'☄️',name:'Apocalipsis solar',desc:'Matá 5.000 solcitos.',prog:'squash',goal:5000},
   {id:'combo',ar:'juego',ic:'⚡',name:'Combo x15',desc:'15 solcitos seguidos sin errarle a ninguno.',prog:'combo',goal:15},
-  {id:'record',ar:'juego',ic:'🏅',name:'Mano rápida',desc:'50 puntos en una partida.',prog:'best',goal:50},
+  {id:'mitad',ar:'juego',ic:'🎮',name:'Mitad del camino',desc:'Llegar al nivel 5.',prog:'lvl',goal:5},
+  {id:'jefazo',ar:'juego',ic:'🐉',name:'Le ganamos al boss',desc:'Derrotar al Final Boss del juego (nivel 8).',prog:'bossKills',goal:1},
+  {id:'imposible',ar:'juego',ic:'💀',name:'Imposible',desc:'Pasar los 10 niveles.',prog:'wins',goal:1},
+  {id:'record',ar:'juego',ic:'🏅',name:'Mano rápida',desc:'150 puntos en una partida.',prog:'best',goal:150},
   {id:'maraton',ar:'juego',ic:'🕹️',name:'Maratón',desc:'Jugar 20 partidas.',prog:'plays',goal:20},
   {id:'milktoy',ar:'bizarro',ic:'🥛',name:'Muñeco de leche',desc:'Atrapá a MilkToy por primera vez.',hint:'Aparece muy de vez en cuando. Hay que tocarlo antes de que se escape.',prog:'milk',goal:1},
   {id:'milkdanger',ar:'bizarro',ic:'⚠️',name:'MilkToy danger',desc:'Atrapá a MilkToy 5 veces.',prog:'milk',goal:5},
@@ -83,7 +89,7 @@ const ACH = [
   {id:'ctrlz',ar:'bizarro',ic:'↩️',name:'Ctrl+Z',desc:'Usar «Deshacer» 10 veces.',prog:'undos',goal:10},
 ];
 
-const WORDS = ['Wepa', 'Oku', 'Okarola', 'Dale', 'Incre', 'Perfe', 'Cul', 'A?', 'Xupala', 'MilkToy danger'];
+const WORDS = ['Wepa', 'Oku', 'Okarola', 'Ok', 'Dale', 'Incre', 'Perfe'];
 if(typeof seed !== 'function') window.seed = () => ({v:2, xpl:[], sunLog:[], stats:{}, ach:{}, tasks:[], songs:[], events:[], movs:[], calls:[], feed:[]});
 
 /* ---------- utils ---------- */
@@ -184,6 +190,7 @@ const maxStat = k => Object.values(S.stats).reduce((a, s) => Math.max(a, s[k] ||
 const PROG = {
   squash:() => sumStat('squash'), combo:() => maxStat('combo'), best:() => maxStat('best'), plays:() => sumStat('plays'),
   milk:() => sumStat('milk'), milkEsc:() => sumStat('milkEsc'), undos:() => sumStat('undos'),
+  lvl:() => maxStat('lvl'), bossKills:() => sumStat('boss'), wins:() => sumStat('wins'),
   quests:() => S.tasks.filter(t => t.done).length, notes:() => allNotes(), cheers:() => S.feed.reduce((a, f) => a + (f.cheers || []).length, 0),
   triple:() => { const d = {}; S.sunLog.forEach(x => { (d[x.d] = d[x.d] || new Set()).add(x.who); }); return Object.values(d).filter(s => s.size >= 3).length; },
   prorrogas:() => S.feed.filter(f => /pidió prórroga/.test(f.text)).length, streak:() => S.streak, out:() => S.songs.filter(s => s.stage===6).length,
@@ -276,7 +283,7 @@ function renderTop(){
   const L = lvl(S.xp);
   $('#lvlpill').innerHTML = `${sun({size:20, seed:7, n:9})} Levvel ${L.n} · ${num(S.xp)} XP`;
   $('#who').innerHTML = Sync.live
-    ? `<span class="av on" style="--c:${M[S.me].c}" title="${M[S.me].name}">${M[S.me].emoji}</span>`
+    ? `<button class="av on" style="--c:${M[S.me].c}" data-act="members" aria-label="Ver a ${M[S.me].name} y la banda" title="${M[S.me].name}">${M[S.me].emoji}</button>`
     : IDS.map(id => `<button class="av ${S.me===id?'on':''}" style="--c:${M[id].c}" data-act="me" data-id="${id}" aria-pressed="${S.me===id}" aria-label="Soy ${M[id].name}" title="${M[id].name}">${M[id].emoji}</button>`).join('');
   const items = [['hoy','Hoy'],['agenda','Calendario'],['misiones','Quests'],['caja','Caja'],['banda','Banda']];
   $('#nav').innerHTML = items.map(([v,l]) => `<button class="${S.ui.view===v?'on':''}" data-act="nav" data-v="${v}" ${S.ui.view===v?'aria-current="page"':''}>${ICON[v]}<span>${l}</span></button>`).join('') + `<p class="nav-brand">Central do Maldad${Sync.live ? '' : ' · demo'}</p>`;
@@ -302,7 +309,7 @@ function renderHoy(){
           <div class="kicker">${fmtShort(show.date).toUpperCase()} ${sun({size:11,seed:2})} ${show.time} HS ${sun({size:11,seed:4})} PURA VIDA</div>
           <h1 class="hero-title">El tercer y último show de Evvil</h1>
           <div class="count"><span class="num" data-days>–</span><span class="unit" data-unit>días</span><span class="clock" data-clock></span></div>
-          <p class="lineup">junto a <b>TERMOCUPLA</b> <span>(La Plata)</span> y <b>MACABRA</b> <span>(Mar del Plata)</span>. Presentamos «Los Papás».</p>
+          <p class="lineup">${show.with ? `junto a ${esc(show.with.split('. ')[0])}. ` : ''}Presentamos «Los Papás».</p>
           <button class="btn ghost sm hero-go" data-act="event" data-id="e16">Ver el show</button>
         </div>
         <button class="boss-mini" data-act="nav" data-v="misiones">
@@ -497,11 +504,16 @@ function movRow(x){
 function renderBanda(){
   const L = lvl(S.xp), on = ACH.filter(a => S.ach[a.id]).length;
   const hist = [
-    ['Ene 2024','Fran crea el grupo. Primeras zapadas'],['Jun 2025','«Somos eVVil»: nueva banda, viejas canciones'],['5 jul 2025','Festival Mugre o Muerte · Fábrica Cita'],
-    ['25 oct 2025','Ciudad de Gatos, con Mister y Los Misterios','img/gatos_evvil1.jpg'],['Dic 2025','Grabamos 11 temas en lo de Ferna'],['21 feb 2026','Fecha en Guajira'],
+    ['Ene 2024','Fran crea el grupo: arranca Evil Formica','img/evil_formica.webp','logo'],
+    ['21 mar 2025','Con Colapso y Ortiba en Casa Únclan, como Evil Formica','img/flyer_colapso.jpg'],
+    ['Jun 2025','«Somos eVVil»: nueva banda, viejas canciones'],
+    ['5 jul 2025','Festival Mugre o Muerte vol. 22 · Fábrica Cita, como Evvil (ex Fórmica)','img/flyer_mugre.jpg'],
+    ['25 oct 2025','Ciudad de Gatos, con Mister y Los Misterios','img/flyer_mister.jpg'],['Dic 2025','Grabamos 11 temas en lo de Ferna'],
+    ['21 feb 2026','Ciclo Un Verano en Guajira, con Ortiba y No Me Toques','img/flyer_verano.jpg'],
     ['Abr 2026','Arrancan mezclas y voces en lo de Fraxu'],['16 may 2026','El primer show de Evvil · Pura Vida, con Poderes Extraños','img/flyer_pura.jpg'],
     ['14 jun 2026','Con Bloques Irreconciliables · Pura Vida','img/flyer_bi.jpg'],['17 jul 2026','Mundial de bandas · Ciudad de Gatos'],
-    ['7 ago 2026','Sale «Los Chicos»','img/tapa_loschicos.jpg'],['14 ago 2026','Tocamos en vivo en un stream'],['15 ago 2026','El segundo show de Evvil · Guajira, con Morfar'],
+    ['7 ago 2026','Sale «Los Chicos»','img/tapa_loschicos.jpg'],['14 ago 2026','Tocamos en vivo en un stream'],
+    ['15 ago 2026','El segundo show de Evvil · Guajira, con Morfar','img/flyer_morfar.jpg'],
     ['17 oct 2026','Espantoctubre x Batalla de Videos'],['28 oct 2026','Master de «Los Papás»'],['Oct 2026','Arranca la Central do Maldad · levvel 0'],
   ];
   return `<div class="banda">
@@ -512,7 +524,7 @@ function renderBanda(){
     <section class="card wide"><div class="r-head"><h2 class="h">Achievvilments <span class="h-sub">${on} de ${ACH.length} unlocked</span></h2><button class="mini-link" data-act="ach-all">${ARISTAS.every(a => S.ui.achOpen[a.id]) ? 'Cerrar todo' : 'Abrir todo'}</button></div>
       <p class="tiny" style="margin:-4px 0 12px">Algunos se desbloquean solos y otros los marca cualquiera de los tres. Las métricas de redes aparecen solo cuando cruzan un hito, nunca como meta.</p>
       <div class="achs">${ARISTAS.map(achCatHTML).join('')}</div></section>
-    <section class="card"><h2 class="h">Evvolución</h2><ol class="timeline">${hist.map(([w,t,img]) => `<li><div class="tw">${w}</div><div class="tt">${t}</div>${img ? `<button class="tl-img" data-act="img" data-src="${img}" aria-label="Ver imagen: ${esc(t)}"><img src="${img}" alt="" loading="lazy"></button>` : ''}</li>`).join('')}
+    <section class="card"><h2 class="h">Evvolución</h2><ol class="timeline">${hist.map(([w,t,img,kind]) => `<li><div class="tw">${w}</div><div class="tt">${t}</div>${img ? `<button class="tl-img ${kind || ''}" data-act="img" data-src="${img}" aria-label="Ver imagen: ${esc(t)}"><img src="${img}" alt="" loading="lazy"></button>` : ''}</li>`).join('')}
       <li class="now"><div class="tw">Hoy</div><div class="tt">Levvel ${L.n} · ${esc(L.name)}</div></li>
       <li class="fut"><div class="tw">19 dic 2026</div><div class="tt">El tercer y último show de Evvil</div></li></ol>
       <p class="tiny" style="margin-top:12px">Armada con la carpeta, la gacetilla y los chats de Evvil.</p></section>
@@ -809,7 +821,11 @@ const A = {
   'ach-cat'(b){ const k = b.dataset.k; S.ui.achOpen[k] = !S.ui.achOpen[k]; saveLocal(); rerender(); },
   'ach-all'(){ const all = ARISTAS.every(a => S.ui.achOpen[a.id]); ARISTAS.forEach(a => S.ui.achOpen[a.id] = !all); saveLocal(); rerender(); },
   whoami(){ Sync.pickMember(); },
-  game(){ Game.open({onEnd(r){ stat('squash', r.hits); stat('plays'); const best = statMax('best', r.pts); statMax('combo', r.combo); save(); checkAch(); rerender(); return {best, total:sumStat('squash')}; }}); },
+  game(){ Game.open({onEnd(r){
+    stat('squash', r.hits); stat('plays'); const best = statMax('best', r.pts); statMax('combo', r.combo); const bestLevel = statMax('lvl', r.level);
+    if(r.boss) stat('boss', r.boss); if(r.win) stat('wins');
+    save(); checkAch(); rerender(); return {best, bestLevel, total:sumStat('squash')}; }}); },
+  members(){ S.ui.view = 'banda'; saveLocal(); render(); const el = document.querySelector('.bio'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); },
   undo(){
     if(!UNDO) return; const keep = {me:S.me, ui:S.ui, splashDay:S.splashDay};
     S = Object.assign(JSON.parse(UNDO.s), keep); UNDO = null; recalc(); stat('undos');
@@ -842,7 +858,7 @@ const MILK = {
   onEscape(){ stat('milkEsc'); save(); checkAch(); toast('MilkToy se escapó…'); rerender(); },
 };
 function milkChance(p){ if(window.MilkToy) MilkToy.maybe(p, MILK); }
-const VIEW_ONLY = new Set(['nav','me','info','close','ov-next','task','event','cal-move','cal-day','mis-tab','mis-who','mov-f','add','new-task','new-event','new-mov','ach','mov','task-edit','wa-copy','reset','undo','cheer','enter','pill','img','ach-cat','ach-all','whoami','game']);
+const VIEW_ONLY = new Set(['nav','me','info','close','ov-next','task','event','cal-move','cal-day','mis-tab','mis-who','mov-f','add','new-task','new-event','new-mov','ach','mov','task-edit','wa-copy','reset','undo','cheer','enter','pill','img','ach-cat','ach-all','whoami','game','members']);
 document.addEventListener('click', e => {
   if(e.target.id==='sheet'){ closeSheet(); return; }
   const b = e.target.closest('[data-act]'); if(!b || b.getAttribute('aria-disabled')==='true') return;
