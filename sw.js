@@ -1,6 +1,6 @@
 /* Guarda la app en el celu para que abra rápido y sin señal. Los datos viajan aparte (Supabase). */
-const CACHE = 'cdm-v11';
-const SHELL = ['./', 'index.html', 'css/app.css?v=11', 'js/config.js?v=11', 'js/app.js?v=11', 'js/milktoy.js?v=11', 'js/game.js?v=11', 'js/sync.js?v=11', 'manifest.webmanifest', 'fonts/evvil-regular.woff',
+const CACHE = 'cdm-v12';
+const SHELL = ['./', 'index.html', 'css/app.css?v=12', 'js/config.js?v=12', 'js/app.js?v=12', 'js/milktoy.js?v=12', 'js/game.js?v=12', 'js/push.js?v=12', 'js/sync.js?v=12', 'manifest.webmanifest', 'fonts/evvil-regular.woff',
   'img/evvil.svg', 'img/cosito.webp', 'img/fondo.jpg', 'img/jero.webp', 'img/mica.webp', 'img/fran.webp', 'img/bajo.webp', 'img/bata.webp', 'img/guitarra.webp',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
   'img/cartas/carta1.webp', 'img/cartas/carta1-s.webp', 'img/cartas/carta2.webp', 'img/cartas/carta2-s.webp', 'img/cartas/carta3.webp', 'img/cartas/carta3-s.webp', 'img/cartas/carta4.webp', 'img/cartas/carta4-s.webp', 'img/cartas/carta5.webp', 'img/cartas/carta5-s.webp', 'img/cartas/carta6.webp', 'img/cartas/carta6-s.webp', 'img/cartas/carta7.webp', 'img/cartas/carta7-s.webp', 'img/cartas/carta8.webp', 'img/cartas/carta8-s.webp', 'img/cartas/carta9.webp', 'img/cartas/carta9-s.webp'];
@@ -24,5 +24,23 @@ self.addEventListener('fetch', e => {
     const hit = await cache.match(req);
     const net = fetch(req).then(res => { if(res.ok || res.type === 'opaque') cache.put(req, res.clone()); return res; }).catch(() => hit);
     return hit || net;
+  }));
+});
+
+// Avisos al celu: llegan desde la función «push» de Supabase.
+self.addEventListener('push', e => {
+  let d = {};
+  try{ d = e.data ? e.data.json() : {}; }catch(err){ d = {body:e.data ? e.data.text() : ''}; }
+  e.waitUntil(self.registration.showNotification(d.title || 'Do Maldad', {
+    body:d.body || '', icon:'icons/icon-192.png', badge:'icons/icon-192.png', tag:d.tag || undefined, data:{url:d.url || './'},
+  }));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = new URL((e.notification.data && e.notification.data.url) || './', self.registration.scope), hash = url.hash;
+  e.waitUntil(self.clients.matchAll({type:'window', includeUncontrolled:true}).then(list => {
+    const c = list.find(x => x.url.startsWith(self.registration.scope));
+    if(c){ c.postMessage({hash}); return c.focus(); }
+    return self.clients.openWindow(url.href);
   }));
 });

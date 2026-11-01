@@ -1,35 +1,38 @@
 /* MilkToy, la mascota de Evvil ("café con leche, muñeco de leche").
-   Easter egg: aparece muy de vez en cuando, se escabulle y hay que tocarlo para atraparlo. */
+   Easter egg: aparece cada tanto, se escabulle y hay que tocarlo para atraparlo. */
 (function(){
-  const SKIN = '#efc19c', SKIN_SH = '#dda37c';
+  // Recortado en papel: cabeza enorme, ojos ovalados que se tocan, boca que se abre y se cierra.
+  const SKIN = '#f3cba5', SKIN_SH = '#d9a57e', HAIR = '#3a2313', BEARD = '#6b4226', CAP = '#6c6b3c', CAP_D = '#55542f', SHIRT = '#f4f1ea', AMBER = '#d99a1f';
+  const curls = [[36,108,15],[30,132,16],[32,158,15],[40,182,14],[54,200,12]];
   const SVG = `<svg viewBox="0 0 220 270" aria-hidden="true">
-    <g fill="#24150e">
-      <circle cx="58" cy="92" r="26"/><circle cx="48" cy="128" r="24"/><circle cx="50" cy="164" r="22"/><circle cx="60" cy="196" r="20"/>
-      <circle cx="162" cy="92" r="26"/><circle cx="172" cy="128" r="24"/><circle cx="170" cy="164" r="22"/><circle cx="160" cy="196" r="20"/>
-      <circle cx="80" cy="70" r="24"/><circle cx="140" cy="70" r="24"/><circle cx="110" cy="62" r="26"/>
-    </g>
-    <path d="M58 230c8-26 30-40 52-40s44 14 52 40v40H58Z" fill="#f5f1e8"/>
-    <path d="M58 238h104v12H58Z" fill="#3cb4d8"/>
-    <text x="110" y="266" text-anchor="middle" font-family="Evvil, Londrina Solid, Arial Black, sans-serif" font-size="19" fill="#0c546c">MilkToy</text>
-    <ellipse cx="110" cy="132" rx="50" ry="60" fill="${SKIN}"/>
-    <ellipse cx="128" cy="142" rx="28" ry="42" fill="${SKIN_SH}" opacity=".45"/>
-    <path d="M64 140c2 34 20 66 46 68 26-2 44-34 46-68-8 18-20 26-46 28-26-2-38-10-46-28Z" fill="#2a1810"/>
-    <path d="M84 160c8-6 18-7 26-3 8-4 18-3 26 3-8 2-16 6-26 6s-18-4-26-6Z" fill="#2a1810"/>
-    <path d="M94 172c10 7 24 7 34-2" stroke="#b8475c" stroke-width="4" fill="none" stroke-linecap="round"/>
-    <ellipse cx="88" cy="126" rx="21" ry="17" fill="#3b2617" stroke="#d99a1f" stroke-width="6"/>
-    <ellipse cx="134" cy="126" rx="21" ry="17" fill="#3b2617" stroke="#d99a1f" stroke-width="6"/>
-    <path d="M108 124q3-5 6 0" stroke="#d99a1f" stroke-width="5" fill="none"/>
-    <path d="M78 119q6-6 13-5M124 119q6-6 13-5" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity=".8"/>
-    <path d="M58 92c4-34 26-52 52-52s48 18 52 52c-16-8-34-11-52-11s-36 3-52 11Z" fill="#6c6b3c"/>
-    <path d="M150 66c18-14 36-16 52-10-6 12-22 22-46 26Z" fill="#5a5931"/>
-    <path d="M96 60q14-10 28 0" stroke="#3f3e22" stroke-width="5" fill="none" stroke-linecap="round"/>
-    <circle cx="110" cy="42" r="4" fill="#5a5931"/>
-    <path d="M170 214c-2-14 6-22 16-22h10c6 0 9 6 6 11h4c5 0 7 7 3 10 4 2 4 9-1 11 3 3 1 9-4 9h-20c-8 0-14-6-14-14Z" fill="${SKIN}" stroke="${SKIN_SH}" stroke-width="2"/>
-    <path d="M180 196c-1-12 2-24 8-28 6-3 9 3 7 9l-3 19Z" fill="${SKIN}" stroke="${SKIN_SH}" stroke-width="2"/>
-    <path d="M150 48q4 12 0 18q-4-6 0-18Z" fill="#fff" opacity=".9"/>
+    <g fill="${HAIR}">${curls.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}"/><circle cx="${220 - x}" cy="${y}" r="${r}"/>`).join('')}</g>
+    <path d="M132 44C150 20 190 12 212 22C204 38 178 50 146 54Z" fill="${CAP_D}"/>
+    <path d="M74 202Q60 214 56 232" stroke="${SHIRT}" stroke-width="15" stroke-linecap="round" fill="none"/>
+    <circle cx="54" cy="237" r="9.5" fill="${SKIN}"/>
+    <path d="M72 196C72 190 80 186 88 186H132C140 186 148 190 148 196L156 240H64Z" fill="${SHIRT}"/>
+    <path d="M65 233H155L156 239H64Z" fill="#3cb4d8"/>
+    <text x="110" y="227" text-anchor="middle" font-family="Evvil, Londrina Solid, Arial Black, sans-serif" font-size="17" fill="#0c546c">MilkToy</text>
+    <path d="M64 240H156V252H118V247H102V252H64Z" fill="#2d4a7c"/>
+    <ellipse cx="86" cy="256" rx="20" ry="8" fill="#1c1c22"/><ellipse cx="134" cy="256" rx="20" ry="8" fill="#1c1c22"/>
+    <path d="M146 202Q168 198 182 182" stroke="${SHIRT}" stroke-width="15" stroke-linecap="round" fill="none"/>
+    <g stroke-linecap="round" fill="none"><path d="M179 170L178 147M194 170L196 150" stroke="${SKIN_SH}" stroke-width="9"/><path d="M179 170L178 147M194 170L196 150" stroke="${SKIN}" stroke-width="6.5"/></g>
+    <circle cx="186" cy="176" r="11" fill="${SKIN}"/><path d="M181 166q5-5 10 0" stroke="${SKIN_SH}" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M178 178q6 3 13-1" stroke="${SKIN_SH}" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <ellipse cx="110" cy="116" rx="80" ry="68" fill="${SKIN}"/>
+    <path d="M34 128C38 176 74 198 110 198C146 198 182 176 186 128C176 150 156 164 136 166C128 158 120 156 110 156C100 156 92 158 84 166C64 164 44 150 34 128Z" fill="${BEARD}"/>
+    <path d="M32 96C32 48 66 22 110 22C154 22 188 48 188 96C166 84 140 78 110 78C80 78 54 84 32 96Z" fill="${CAP}"/>
+    <path d="M94 80Q110 60 126 80Z" fill="${HAIR}"/><path d="M92 80H128" stroke="${CAP_D}" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="110" cy="24" r="5" fill="${CAP_D}"/>
+    <ellipse cx="87" cy="121" rx="23" ry="25" fill="#fff"/><ellipse cx="133" cy="121" rx="23" ry="25" fill="#fff"/>
+    <circle cx="96" cy="128" r="4.5" fill="#111"/><circle cx="142" cy="128" r="4.5" fill="#111"/>
+    <g stroke="${AMBER}" stroke-width="6"><ellipse cx="87" cy="121" rx="27" ry="29" fill="rgba(232,160,30,.22)"/><ellipse cx="133" cy="121" rx="27" ry="29" fill="rgba(232,160,30,.22)"/></g>
+    <path d="M60 115L34 106M160 115L186 106" stroke="${AMBER}" stroke-width="5" stroke-linecap="round"/>
+    <path d="M72 107q6-7 14-6M118 107q6-7 14-6" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity=".8"/>
+    <path d="M64 92L102 102M118 102L156 92" stroke="#2a170c" stroke-width="7" stroke-linecap="round"/>
+    <g class="mt-m0"><path d="M96 172Q112 180 128 168l4-3" stroke="#1d0d06" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g class="mt-m1"><path d="M95 168Q111 194 129 166Q112 174 95 168Z" fill="#2a0a0a"/><path d="M103 178Q111 186 119 177Q111 181 103 178Z" fill="#d9576b"/></g>
   </svg>`;
   const SAYS = ['Café con leche, muñeco de leche', 'Leche, roc y terapia', 'Tomá la leche y hacé metal', 'Atrapame si podés', 'Shhh… yo no estuve acá', 'MilkToy danger'];
-  let busy = false, ctx = null;
+  let busy = false, ctx = null, last = 0;
 
   /* ---------- gruñido: 8 notas rapidísimas de un acorde mayor ---------- */
   function audio(){ ctx = ctx || new (window.AudioContext || window.webkitAudioContext)(); if(ctx.state === 'suspended') ctx.resume(); return ctx; }
@@ -67,7 +70,7 @@
 
   /* ---------- aparece, se escabulle, se escapa ---------- */
   function appear(h = {}){
-    if(busy) return false; busy = true;
+    if(busy) return false; busy = true; last = Date.now();
     const el = document.getElementById('milktoy'), W = innerWidth, Hh = innerHeight, size = Math.min(150, W*.36);
     el.innerHTML = `<button class="mt-body" aria-label="¡Atrapá a MilkToy!"><div class="mt-bubble">${SAYS[Math.floor(Math.random()*SAYS.length)]}</div>${SVG}</button>`;
     el.hidden = false; el.className = 'milktoy';
@@ -95,7 +98,8 @@
     return true;
   }
   // p: probabilidad. Se llama solo desde toques del usuario, así el sonido puede sonar en iPhone.
-  function maybe(p, h){ return Math.random() < p ? appear(h) : false; }
+  // Entre una aparición y otra pasa por lo menos un minuto.
+  function maybe(p, h){ return Date.now() - last > 6e4 && Math.random() < p ? appear(h) : false; }
 
   window.MilkToy = {appear, maybe, growl};
 })();

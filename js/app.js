@@ -120,7 +120,7 @@ function sun({size=40, seed=3, n=9, cls='', style=''}={}){
 }
 const star4 = `<svg viewBox="-10 -10 20 20" aria-hidden="true"><path d="M0-10L2.2-2.2 10 0 2.2 2.2 0 10-2.2 2.2-10 0-2.2-2.2Z" fill="currentColor"/></svg>`;
 const CATS = {thelma:['Thelma','#a7acb4'], tony:['Tony','#8d9097'], rober:['Rober','#f4f0e8']};
-const LIVES = ['thelma','tony','rober','thelma','tony','rober','thelma'];
+const LIVES = ['thelma','tony','rober'];
 function catSVG(kind, on){
   const [name, c] = CATS[kind];
   const stripes = kind==='tony' ? '<path d="M10.2 9.4l.9 2M12 8.9v2.3M13.8 9.4l-.9 2M4.6 12.6l2 .5M19.4 12.6l-2 .5M5 15.2l2-.1M19 15.2l-2-.1" stroke="#575a60" stroke-width="1.1" stroke-linecap="round"/>' : '';
@@ -168,10 +168,28 @@ function streakCalc(){
   while((wk[isoDay(d)] || 0) >= 3){ n++; d.setDate(d.getDate() - 7); }
   return n;
 }
+/* 3 vvidas por semana: cada lunes vuelven a 3. Se pierde una por cada quest de la semana que venció
+   sin cerrarse (la prórroga la corre de fecha, así que no cuenta). Lo de semanas anteriores no resta. */
+const MAXL = 3, WK_FROM = '2026-11-02';
+function lateIn(ws, until, at){
+  const a = isoDay(ws);
+  return S.tasks.filter(t => t.due >= a && t.due < until && !(t.done && (!t.doneAt || t.doneAt < at))).length;
+}
+const lateThisWeek = t => !t.done && t.due < isoDay(new Date()) && t.due >= isoDay(weekStart(new Date()));
+// Al empezar una semana nueva, cada vvida que quedó de la anterior suma 10 XP (una sola vez, con id fijo).
+function weekBonus(){
+  const nx = weekStart(new Date()), prev = new Date(nx); prev.setDate(prev.getDate() - 7);
+  const k = isoDay(prev); if(k < WK_FROM || S.xpl.some(x => x.id === 'wk' + k)) return;
+  const left = Math.max(0, MAXL - lateIn(prev, isoDay(nx), nx.getTime())), xp = left * 10;
+  S.xpl.push({id:'wk' + k, n:xp, at:Date.now(), who:'band'});
+  S.feed.unshift({id:'fwk' + k, who:'band', text:left ? `cerró la semana con ${left} ${left===1 ? 'vvida' : 'vvidas'}` : 'arrancó otra semana: vuelven las 3 vvidas', xp, at:Date.now(), cheers:[]});
+  recalc(); save(); rerender();
+  setTimeout(() => toast(left ? `Semana cerrada con ${left} ${left===1 ? 'vvida' : 'vvidas'}: +${xp} XP` : 'Semana nueva: vuelven las 3 vvidas'), 1200);
+}
 function recalc(){
-  const today = isoDay(new Date());
+  const today = isoDay(new Date()), ws = weekStart(new Date());
   S.xp = Math.max(0, S.xpl.reduce((a, x) => a + x.n, 0));
-  S.lives = Math.max(0, 7 - S.tasks.filter(t => !t.done && t.due < today).length);
+  S.lives = Math.max(0, MAXL - lateIn(ws, today, Date.now()));
   S.suns = {}; IDS.forEach(i => S.suns[i] = S.sunLog.some(x => x.d===today && x.who===i));
   S.streak = streakCalc();
 }
@@ -280,7 +298,7 @@ function renderTop(){
     ? `<button class="av on" style="--c:${M[S.me].c}" data-act="members" aria-label="Ver a ${M[S.me].name} y la banda" title="${M[S.me].name}">${M[S.me].emoji}</button>`
     : IDS.map(id => `<button class="av ${S.me===id?'on':''}" style="--c:${M[id].c}" data-act="me" data-id="${id}" aria-pressed="${S.me===id}" aria-label="Soy ${M[id].name}" title="${M[id].name}">${M[id].emoji}</button>`).join('');
   const items = [['hoy','Hoy'],['agenda','Calendario'],['misiones','Quests'],['caja','Caja']];
-  $('#nav').innerHTML = items.map(([v,l]) => `<button class="${S.ui.view===v?'on':''}" data-act="nav" data-v="${v}" ${S.ui.view===v?'aria-current="page"':''}>${ICON[v]}<span>${l}</span></button>`).join('') + `<p class="nav-brand">Central do Maldad${Sync.live ? '' : ' · demo'}</p>`;
+  $('#nav').innerHTML = items.map(([v,l]) => `<button class="${S.ui.view===v?'on':''} ${TOUR && HELP[TOUR.i][0]===v ? 'tour-on' : ''}" data-act="nav" data-v="${v}" ${S.ui.view===v?'aria-current="page"':''}>${ICON[v]}<span>${l}</span></button>`).join('') + `<p class="nav-brand">Central do Maldad${Sync.live ? '' : ' · demo'}</p>`;
   const pt = (r, a) => `${(Math.cos(a)*r).toFixed(1)} ${(Math.sin(a)*r).toFixed(1)}`;
   let rays = ''; for(let i=0;i<10;i++){ const a = i/10*Math.PI*2 - Math.PI/2; rays += `M${pt(19,a-.17)}L${pt(i%2 ? 41 : 48,a)}L${pt(19,a+.17)}Z`; }
   $('#fab').innerHTML = `<svg viewBox="-50 -50 100 100" aria-hidden="true"><path d="${rays}" fill="#f2426a"/><circle r="23" fill="#f2426a"/><path d="M-10 0H10M0-10V10" stroke="#160f1a" stroke-width="5.5" stroke-linecap="round"/></svg>`;
@@ -318,19 +336,30 @@ function renderHoy(){
       </section>
       <section class="card cajamini o4">
         <button class="cm-main" data-act="nav" data-v="caja"><span class="eyebrow">Caja común</span><span class="cm-money">${lg ? money(lg.caja) : '—'}</span>
-          <span class="tiny">${!lg ? 'Esperando el Excel de Mica' : owed ? `${owed} ${owed===1?'cuenta':'cuentas'} para saldar` : 'Caja en orden'}</span></button>
+          <span class="tiny">${!lg ? 'Todavía no hay movimientos' : owed ? `${owed} ${owed===1?'cuenta':'cuentas'} para saldar` : 'Caja en orden'}</span>
+          ${lg && Math.abs(lg.bal[S.me]) > 1.5 ? `<span class="tiny cm-me">${lg.bal[S.me] > 0 ? `Tenés ${money(lg.bal[S.me])} a favor` : `Ponés ${money(-lg.bal[S.me])}`}</span>` : ''}</button>
         <div class="cm-btns"><button class="btn sm" data-act="new-mov" data-k="gasto">+ Gasto</button><button class="btn ghost sm" data-act="new-mov" data-k="ingreso">+ Ingreso</button></div>
       </section>
       <section class="card gameline o5">
         <button class="gl-lvl" data-act="nav" data-v="banda" aria-label="Ver el Levvel de la banda">
           <span class="lvl-badge">${sun({size:44, seed:7, n:10})}<span>${L.n}</span></span>
           <span class="gl-body"><b>${esc(L.name)}</b><span class="xpbar"><i style="width:${(L.pct*100).toFixed(1)}%"></i></span>
-            <span class="tiny">${S.lives}/7 vvidas · soles ${lit}/3 · ${num(S.xp-L.from)}/${num(L.to-L.from)} XP</span></span>
+            <span class="tiny">${S.lives}/${MAXL} vvidas · ${num(S.xp-L.from)}/${num(L.to-L.from)} XP</span></span>
         </button>
-        <button class="gl-sun ${myLit?'lit':''}" style="--c:${M[S.me].c}" data-act="sun" data-id="${S.me}" ${myLit?'aria-disabled="true"':''} aria-label="Tu sol de hoy: ${myLit?'encendido':'apagado'}">${sun({size:30, seed:hash(S.me)%50, n:9})}<span>${myLit?'Encendido':'Tu sol'}</span></button>
+        <div class="soles-wrap"><div class="soles">${IDS.map(i => solHTML(i)).join('')}</div>
+          <p class="tiny gl-hint">${lit===3 ? '¡Triple sol! Los tres encendieron el suyo.' : myLit ? `Soles de hoy: ${lit} de 3. Con los tres, triple sol: +15 XP.` : 'Tocá tu sol para encenderlo: +5 XP. Con los tres, triple sol.'}</p></div>
       </section>
     </div>
   </div>`;
+}
+/* Soles del día: apagado es un carbón; encendido brilla y gira despacio */
+let JUST_LIT = null;
+function solHTML(i){
+  const lit = S.suns[i], mine = i===S.me, cls = `sol ${lit ? 'on' : ''} ${mine ? 'mine' : ''} ${JUST_LIT===i ? 'just' : ''}`;
+  const inner = `${sun({size:46, seed:hash(i)%50, n:9, cls:lit ? 'lit' : 'coal'})}<span class="sol-n">${M[i].emoji} ${M[i].name}</span>`;
+  return mine && !lit
+    ? `<button class="${cls}" data-act="sun" data-id="${i}" aria-label="Encender tu sol de hoy">${inner}</button>`
+    : `<span class="${cls}" role="img" aria-label="Sol de ${M[i].name}: ${lit ? 'encendido' : 'apagado'}">${inner}</span>`;
 }
 function askRow(e){
   return `<li class="ev-ask">${evBtn(e)}<div class="ask-row">${Object.keys(RS).map(k => `<button class="pill ${e.rsvp?.[S.me]===k?'on':''}" data-act="rsvp" data-id="${e.id}" data-k="${k}" aria-pressed="${e.rsvp?.[S.me]===k}">${RS[k]}</button>`).join('')}</div></li>`;
@@ -343,7 +372,7 @@ function statusHTML(L, cls='', size=84){
       <div class="xpbar" role="progressbar" aria-valuemin="0" aria-valuemax="${L.to-L.from}" aria-valuenow="${S.xp-L.from}"><i style="width:${(L.pct*100).toFixed(1)}%"></i></div>
       <div class="tiny"><b>${num(S.xp-L.from)}</b> / ${num(L.to-L.from)} XP para «${esc(L.next || 'el infinito')}»</div></div>
     <div class="meters">
-      <div class="meter"><div class="m-lab">7 vvidas</div><div class="cats" aria-label="${S.lives} de 7 vvidas">${LIVES.map((k,i) => catSVG(k, i < S.lives)).join('')}</div><div class="tiny" style="margin-top:6px">${S.lives}/7 · Thelma, Tony y Rober</div></div>
+      <div class="meter"><div class="m-lab">${MAXL} vvidas</div><div class="cats" aria-label="${S.lives} de ${MAXL} vvidas">${LIVES.map((k,i) => catSVG(k, i < S.lives)).join('')}</div><div class="tiny" style="margin-top:6px">${S.lives}/${MAXL} · vuelven cada lunes. Las que queden el domingo suman +10 XP cada una.</div></div>
       <div class="meter"><div class="m-lab">Racha</div><div class="m-val">${S.streak ? `${S.streak} <small>${S.streak===1?'semana':'semanas'} en movimiento</small>` : 'Primera <small>semana</small>'}</div><div class="wk"><i style="width:${Math.min(1, wc/3)*100}%"></i></div><div class="tiny">${wc>=3 ? 'Semana asegurada' : `${wc}/3 quests esta semana`}</div></div>
     </div>
   </section>`;
@@ -459,12 +488,14 @@ function callCard(k){
 function ledger(){
   const bal = {jero:0, mica:0, fran:0}; let caja = 0, ing = 0, gasCaja = 0;
   for(const x of S.movs){
-    if(x.k==='gasto'){ if(x.by==='caja'){ caja -= x.amt; gasCaja += x.amt; } else { bal[x.by] += x.amt; IDS.forEach(i => bal[i] -= x.amt/3); } }
+    if(x.k==='gasto'){ if(x.by==='caja'){ caja -= x.amt; gasCaja += x.amt; } else { const sp = splitOf(x); bal[x.by] += x.amt; sp.forEach(i => bal[i] -= x.amt/sp.length); } }
     else if(x.k==='ingreso'){ caja += x.amt; ing += x.amt; }
     else if(x.k==='pago'){ bal[x.from] += x.amt; bal[x.to] -= x.amt; }
   }
   return {bal, caja, ing, gasCaja};
 }
+// Entre quiénes se divide un gasto: los tres, salvo que diga otra cosa (ej: lo que le debe uno solo).
+const splitOf = x => x.split && x.split.length ? x.split : IDS;
 function settlePlan(bal){
   const cr = IDS.filter(i => bal[i] > 1.5).map(i => ({i, v:bal[i]})).sort((a,b) => b.v-a.v);
   const db = IDS.filter(i => bal[i] < -1.5).map(i => ({i, v:-bal[i]})).sort((a,b) => b.v-a.v);
@@ -475,9 +506,9 @@ function settlePlan(bal){
 function renderCaja(){
   if(!S.movs.length) return `<div class="caja">
     <section class="card cajabox"><div class="eyebrow">Caja común</div><div class="big-money">—</div>
-      <div class="tiny">Mica lleva las cuentas en un Excel. Cuando lo pase, Claude lo carga acá y aparecen la caja y lo que tiene a favor cada uno.</div>
+      <div class="tiny">Todavía no hay movimientos. Anotá el primer gasto o ingreso y aparecen la caja y lo que tiene a favor cada uno.</div>
       <div class="row"><button class="btn" data-act="new-mov" data-k="gasto">+ Gasto</button><button class="btn ghost" data-act="new-mov" data-k="ingreso">+ Ingreso</button></div></section>
-    <section class="card"><h2 class="h">Cómo funciona</h2><p class="tiny">Cada gasto se divide en tres partes iguales y los ingresos entran a la caja común. Lo personal (palillos, cuerdas) no se carga. La app dice quién le pasa plata a quién para quedar a mano. Anotar un movimiento suma 10 XP, sin importar el monto.</p></section>
+    <section class="card"><h2 class="h">Cómo funciona</h2><p class="tiny">Cada gasto se divide en partes iguales (los tres, si no se aclara) y los ingresos entran a la caja común. Lo personal (palillos, cuerdas) no se carga. La app dice quién le pasa plata a quién para quedar a mano. Anotar un movimiento suma 10 XP, sin importar el monto.</p></section>
   </div>`;
   const {bal, caja, ing, gasCaja} = ledger(), plan = settlePlan(bal), f = S.ui.movF;
   const movs = S.movs.filter(x => f==='todo' || (f==='gastos' && x.k==='gasto') || (f==='ingresos' && x.k==='ingreso')).slice().sort((a,b) => b.date.localeCompare(a.date));
@@ -485,19 +516,19 @@ function renderCaja(){
     <section class="card cajabox"><div class="eyebrow">Caja común</div><div class="big-money">${money(caja)}</div>
       <div class="tiny">Entró ${money(ing)} · se pagó ${money(gasCaja)} con la caja</div>
       <div class="row"><button class="btn" data-act="new-mov" data-k="gasto">+ Gasto</button><button class="btn ghost" data-act="new-mov" data-k="ingreso">+ Ingreso</button></div></section>
+    <section class="card"><h2 class="h">Cuentas entre ustedes</h2>
+      ${plan.length ? plan.map(p => `<div class="debt"><span class="pair">${M[p.from].emoji}→${M[p.to].emoji}</span><p>${M[p.from].name} le pasa a ${M[p.to].name}<br><span class="money">${money(p.amt)}</span></p><button class="btn sm" data-act="settle" data-from="${p.from}" data-to="${p.to}">Saldar</button></div>`).join('') : `<div class="allgood">${sun({size:40, seed:12})}<div><b>Caja en orden.</b><div class="tiny">Nadie le debe nada a nadie.</div></div></div>`}
+      <div class="split">${IDS.map(i => `<div class="sp"><span class="e">${M[i].emoji}</span><span>${M[i].name}</span><b class="money ${bal[i] >= -1.5 ? 'pos' : 'neg'}">${bal[i] >= 0 ? '+' : '−'}${money(Math.abs(bal[i]))}</b></div>`).join('')}</div>
+      <p class="tiny">Cada gasto se divide en partes iguales entre los que lo comparten: los tres, si no se aclara. Lo personal (palillos, cuerdas) no se carga. Anotar un movimiento suma 10 XP, sin importar el monto.</p></section>
     <section class="card movs"><h2 class="h">Movimientos</h2>
       <div class="filters">${[['todo','Todo'],['gastos','Gastos'],['ingresos','Ingresos']].map(([k,l]) => `<button class="fchip ${f===k?'on':''}" data-act="mov-f" data-k="${k}">${l}</button>`).join('')}</div>
       <div>${movs.map(movRow).join('') || '<p class="empty">Nada por acá.</p>'}</div>
       <p class="tiny" style="margin-top:8px">Tocá un movimiento para borrarlo.</p></section>
-    <section class="card"><h2 class="h">Cuentas entre ustedes</h2>
-      ${plan.length ? plan.map(p => `<div class="debt"><span class="pair">${M[p.from].emoji}→${M[p.to].emoji}</span><p>${M[p.from].name} le pasa a ${M[p.to].name}<br><span class="money">${money(p.amt)}</span></p><button class="btn sm" data-act="settle" data-from="${p.from}" data-to="${p.to}">Saldar</button></div>`).join('') : `<div class="allgood">${sun({size:40, seed:12})}<div><b>Caja en orden.</b><div class="tiny">Nadie le debe nada a nadie.</div></div></div>`}
-      <div class="split">${IDS.map(i => `<div class="sp"><span class="e">${M[i].emoji}</span><span>${M[i].name}</span><b class="money ${bal[i] >= -1.5 ? 'pos' : 'neg'}">${bal[i] >= 0 ? '+' : '−'}${money(Math.abs(bal[i]))}</b></div>`).join('')}</div>
-      <p class="tiny">Cada gasto se divide en tres partes iguales. Lo personal (palillos, cuerdas) no se carga. Anotar un movimiento suma 10 XP, sin importar el monto.</p></section>
   </div>`;
 }
 function movRow(x){
   const ic = x.k==='gasto' ? ['g','−'] : x.k==='ingreso' ? ['i','+'] : ['p','⇄'];
-  const sub = x.k==='gasto' ? (x.by==='caja' ? 'pagó la caja' : `pagó ${M[x.by].emoji} ${M[x.by].name} · ${money(x.amt/3)} c/u`) : x.k==='ingreso' ? 'entró a la caja' : `${M[x.from].name} le pasó a ${M[x.to].name}`;
+  const sp = splitOf(x), sub = x.k==='gasto' ? (x.by==='caja' ? 'pagó la caja' : `pagó ${M[x.by].emoji} ${M[x.by].name} · ${sp.length===1 ? `lo debe ${M[sp[0]].name}` : sp.length===3 ? `${money(x.amt/3)} c/u` : `${money(x.amt/sp.length)} c/u, ${sp.map(i => M[i].name).join(' y ')}`}`) : x.k==='ingreso' ? 'entró a la caja' : `${M[x.from].name} le pasó a ${M[x.to].name}`;
   return `<button class="mov" data-act="mov" data-id="${x.id}"><span class="mov-ic ${ic[0]}">${ic[1]}</span><span style="min-width:0;display:block"><span class="mov-c">${esc(x.concept)}</span><span class="tiny">${fmtShort(x.date)} · ${sub}</span></span><b class="money ${x.k==='ingreso'?'pos':''}">${x.k==='gasto'?'−':x.k==='ingreso'?'+':''}${money(x.amt)}</b></button>`;
 }
 
@@ -538,8 +569,9 @@ function renderBanda(){
         <li><b>Grabación:</b> Fernando Aguilar (Ferna)</li><li><b>Guitarras de «Los Chicos»:</b> Luq Nacional (Salvadori)</li><li><b>Mezcla y voces:</b> Fraxu (Fran Labaqui)</li>
         <li><b>Master:</b> Fermín Irigoyen</li><li><b>Arte:</b> Dani (@danielaojoenblanco)</li><li><b>Videoclip:</b> Aaron Marshall</li><li><b>Mail:</b> evvil.lml@gmail.com</li></ul></details>
       <p class="tiny" style="margin-top:10px">Sin ranking: todo lo que hace cada uno suma al levvel de la banda.</p></section>
-    <section class="card"><h2 class="h">Avisos al celu</h2><div class="pushes">${pushes().map(p => `<div class="push"><span class="push-ic">${sun({size:22, seed:9})}</span><div style="min-width:0"><div class="push-h"><span>Do Maldad</span><span>${p[0]}</span></div><p>${p[1]}</p></div></div>`).join('')}</div>
-      <p class="tiny" style="margin-top:10px">Así van a llegar los avisos al celu (próxima etapa).</p></section>
+    <section class="card" id="avisos"><h2 class="h">Avisos al celu</h2>${pushCard()}
+      <div class="pushes">${pushes().map(p => `<div class="push"><span class="push-ic">${sun({size:22, seed:9})}</span><div style="min-width:0"><div class="push-h"><span>Do Maldad</span><span>${p[0]}</span></div><p>${p[1]}</p></div></div>`).join('')}</div>
+      <p class="tiny" style="margin-top:10px">Avisa cuando te cargan una quest, cuando alguien agenda algo o deja una nota, a las 10 si hay algo hoy o mañana, y los lunes con el parte para el grupo. Cada celu los activa una vez.</p></section>
     <section class="card"><h2 class="h">Parte para el grupo</h2><pre class="wa" id="wa-text">${esc(weeklyText())}</pre>
       <div class="row"><a class="btn" href="https://wa.me/?text=${encodeURIComponent(weeklyText())}" target="_blank" rel="noopener">Mandar por WhatsApp</a><button class="btn ghost" data-act="wa-copy">Copiar texto</button></div>
       <p class="tiny" style="margin-top:10px">Todos los lunes la app arma este parte. Un toque y lo mandás al grupo.</p></section>
@@ -559,14 +591,34 @@ function achCatHTML(ar){
   return `<div class="ach-cat ${open?'open':''}"><button class="ach-h" data-act="ach-cat" data-k="${ar.id}" aria-expanded="${open}"><span class="ach-name">${ar.name}</span><span class="ach-prog"><i style="width:${(on/list.length*100).toFixed(0)}%"></i></span><span class="ach-n">${on}/${list.length}</span><span class="chev" aria-hidden="true">${ICON.next}</span></button>
     ${open ? `<div class="ach-grid">${list.map(a => { const on = S.ach[a.id], pv = a.prog && !on ? Math.min(PROG[a.prog](), a.goal) : null; return `<button class="badge ${on?'on':''}" data-act="ach" data-id="${a.id}"><span class="b-ic">${sun({size:38, seed:hash(a.id)%60, n:9})}<b>${a.ic}</b></span><span>${esc(a.name)}</span>${pv !== null && a.goal > 1 ? `<span class="b-prog"><i style="width:${(pv/a.goal*100).toFixed(0)}%"></i></span><span class="b-n">${num(pv)}/${num(a.goal)}</span>` : ''}</button>`; }).join('')}</div>` : ''}</div>`;
 }
+// Ejemplos de los avisos que manda la función «push» (los textos salen de lo que hay cargado).
 function pushes(){
-  const out = [], e1 = upcoming().find(e => e.type==='mie' || e.type==='ensayo'), B = boss(), show = showEv();
-  if(e1){ const late = (e1.notes||[]).find(n => /tarde/i.test(n.text)); out.push([dd(e1.date)===1?'hoy 10:00':'ahora', `${dd(e1.date)===1?'Mañana':'El '+fmtShort(e1.date)} a las ${e1.time}: ${e1.title}.${late ? ` ${M[late.who].name} avisó que llega tarde.` : ''}`]); }
-  out.push(['lun 10:00', `Faltan ${Math.max(0, dd(show.date))} días para el tercer show. Al Final Boss le queda ${Math.round(B.pct*100)}% de HP.`]);
-  const f = S.feed.find(x => x.xp && x.who!=='band'); if(f) out.push([rel(f.at), `${M[f.who].emoji} ${M[f.who].name} ${f.text}. +${f.xp} XP para la banda.`]);
-  const missing = IDS.filter(i => !S.suns[i]); if(missing.length && missing.length<3) out.push(['20:00', `Falta el sol de ${missing.map(i => M[i].name).join(' y ')}. Los demás ya lo encendieron.`]);
-  const k = S.calls.filter(c => c.status<2 && c.close && dd(c.close) >= 0).sort((a,b) => a.close.localeCompare(b.close))[0]; if(k) out.push(['9:30', `Convocatoria: «${k.name}» cierra ${dueTxt(k.close)}.`]);
+  const out = [], e1 = upcoming().find(e => !['deadline','lanz'].includes(e.type)), B = boss(), show = showEv();
+  out.push(['lun 10:00', `Arranca la semana: faltan ${Math.max(0, dd(show.date))} días para el tercer show y al Final Boss le queda ${Math.round(B.pct*100)}% de HP. El parte está listo para el grupo.`]);
+  if(e1) out.push(['10:00', `${dd(e1.date)===0 ? 'Hoy' : dd(e1.date)===1 ? 'Mañana' : 'El ' + fmtShort(e1.date)}${e1.time ? ` a las ${e1.time}` : ''}: ${e1.title}.`]);
+  const other = IDS.find(i => i !== S.me), t = S.tasks.find(x => !x.done && (x.who===S.me || x.who==='all'));
+  if(t) out.push(['ahora', `${M[other].name} te cargó una quest: «${t.title}», para el ${fmtShort(t.due)}.`]);
+  const k = S.calls.filter(c => c.status<2 && c.close && dd(c.close) >= 0).sort((a,b) => a.close.localeCompare(b.close))[0]; if(k) out.push(['10:00', `«${k.name}» cierra ${dueTxt(k.close)}.`]);
   return out;
+}
+function pushCard(){
+  const st = window.Push ? Push.state() : 'demo';
+  const [msg, btn] = {
+    demo:['En el modo demo no hay avisos.', ''],
+    ios:['En iPhone, primero agregala a inicio (Compartir → «Agregar a inicio») y abrila desde ese ícono. Después los activás acá.', ''],
+    nope:['Este navegador no puede recibir avisos. Probá desde la app instalada.', ''],
+    denied:['Los avisos están bloqueados para la Central. Se destraban desde los ajustes del celu.', ''],
+    on:['Los avisos llegan a este celu.', '<button class="mini-link" data-act="push-off">Apagarlos</button>'],
+    off:['', '<button class="btn" data-act="push-on">Activar avisos en este celu</button>'],
+    busy:['Activando…', ''],
+  }[st];
+  return `<div class="push-st ${st}">${msg ? `<p class="tiny">${msg}</p>` : ''}${btn}</div>`;
+}
+function parteSheet(){
+  const txt = weeklyText();
+  return `<div class="sh-head"><h2 class="sh-title">Parte de la semana</h2><p class="sh-sub">Uno de los tres lo manda al grupo de WhatsApp.</p></div>
+    <pre class="wa" id="wa-text">${esc(txt)}</pre>
+    <div class="row"><a class="btn" href="https://wa.me/?text=${encodeURIComponent(txt)}" target="_blank" rel="noopener">Mandar por WhatsApp</a><button class="btn ghost" data-act="wa-copy">Copiar texto</button></div>`;
 }
 function weeklyText(){
   const L = lvl(S.xp), B = boss(), show = showEv(), lim = isoDay(new Date(Date.now()+7*864e5));
@@ -609,10 +661,10 @@ function taskSheet(id){
   const late = !t.done && dd(t.due) < 0, song = t.song && S.songs.find(s => s.id===t.song);
   return `<div class="sh-head"><div class="chips"><span class="chip">${CAT[t.cat]}</span>${t.boss?'<span class="chip boss">Boss 19/12</span>':''}${song?`<span class="chip">${esc(song.name)}</span>`:''}</div><h2 class="sh-title">${esc(t.title)}</h2>
     <p class="sh-sub">${whoChip(t.who)} · ${fmtShort(t.due)} (${t.done?'hecha':dueTxt(t.due)}) · <b>+${t.xp} XP</b>${t.by?` · la cargó ${M[t.by].name}`:''}</p></div>
-    ${late ? `<div class="soft"><b>Se pasó la fecha.</b> Se fue una de las 9 lives, nada más. Si la terminan, vuelve. Si necesitan más tiempo, pidan prórroga: es gratis.</div>` : ''}
+    ${late ? `<div class="soft"><b>Se pasó la fecha.</b> ${lateThisWeek(t) ? 'Esta semana se fue una vvida, nada más. Si la cierran, vuelve. ' : ''}Si necesitan más tiempo, pidan prórroga: es gratis.</div>` : ''}
     <div class="row"><button class="btn" data-act="complete" data-id="${t.id}" data-close="1">${t.done?'Volver a pendiente':'Marcar hecha'}</button>${!t.done?`<button class="btn ghost" data-act="extend" data-id="${t.id}">Prórroga de 7 días</button>`:''}</div>
     <div class="row" style="margin-top:14px;gap:16px"><button class="mini-link" data-act="task-edit" data-id="${t.id}">Editar</button><button class="mini-link" data-act="task-del" data-id="${t.id}">Borrar</button></div>
-    <p class="tiny" style="margin-top:12px">Pedir prórroga no quita lives. Una se pierde solo si la fecha pasa sin que nadie diga nada.</p>`;
+    <p class="tiny" style="margin-top:12px">Pedir prórroga no quita vvidas. Una se pierde solo si la fecha pasa sin que nadie diga nada, y el lunes vuelven a 3.</p>`;
 }
 function plus(n){ return isoDay(new Date(Date.now() + n*864e5)); }
 function nextDow(dow){ const d = new Date(); d.setDate(d.getDate() + (((dow - d.getDay() + 7) % 7) || 7)); return isoDay(d); }
@@ -622,7 +674,7 @@ function addSheet(){
   <div class="add-list">
     ${it('new-task','🎯','Quest','Algo que hay que hacer: quién y para cuándo. +5 XP')}
     ${it('new-event','📅','Evento','Algo con día y hora: miércoles, show, grabación, reunión.')}
-    ${it('new-mov','💸','Gasto','Algo que se pagó. Se divide entre los tres. +10 XP','gasto')}
+    ${it('new-mov','💸','Gasto','Algo que se pagó. Se divide en partes iguales. +10 XP','gasto')}
     ${it('new-mov','💰','Ingreso','Plata que entró a la caja. +10 XP','ingreso')}
   </div>`;
 }
@@ -657,11 +709,12 @@ function eventForm(){
 }
 function movForm(k){
   const g = k==='gasto';
-  return `<div class="sh-head"><h2 class="sh-title">${g?'Nuevo gasto':'Nuevo ingreso'}</h2><p class="sh-sub">${g?'Se divide en tres partes iguales.':'Entra a la caja común.'} Anotarlo suma 10 XP.</p></div>
+  return `<div class="sh-head"><h2 class="sh-title">${g?'Nuevo gasto':'Nuevo ingreso'}</h2><p class="sh-sub">${g?'Se divide en partes iguales.':'Entra a la caja común.'} Anotarlo suma 10 XP.</p></div>
   <form class="form" data-form="mov" data-k="${k}">
     <label for="f-concept">Concepto<input type="text" id="f-concept" name="concept" required maxlength="60" placeholder="${g?'Ej: sala de ensayo, impresión de stickers':'Ej: venta de merch, cachet'}"></label>
     <label for="f-amt">Monto en pesos<input type="number" id="f-amt" name="amt" required min="1" step="1" inputmode="numeric" placeholder="0"></label>
-    ${g ? `<fieldset><legend>Quién pagó</legend><div class="opts">${[...IDS,'caja'].map(i => `<label class="opt"><input type="radio" name="by" value="${i}" ${i===S.me?'checked':''}><span>${i==='caja'?'La caja':`${M[i].emoji} ${M[i].name}`}</span></label>`).join('')}</div></fieldset><p class="preview" id="split-prev"></p>` : ''}
+    ${g ? `<fieldset><legend>Quién pagó</legend><div class="opts">${[...IDS,'caja'].map(i => `<label class="opt"><input type="radio" name="by" value="${i}" ${i===S.me?'checked':''}><span>${i==='caja'?'La caja':`${M[i].emoji} ${M[i].name}`}</span></label>`).join('')}</div></fieldset>
+    <fieldset><legend>Entre quiénes se divide</legend><div class="opts">${IDS.map(i => `<label class="opt"><input type="checkbox" name="split" value="${i}" checked><span>${M[i].emoji} ${M[i].name}</span></label>`).join('')}</div></fieldset><p class="preview" id="split-prev"></p>` : ''}
     <label for="f-mdate">Fecha<input type="date" id="f-mdate" name="date" required value="${isoDay(new Date())}"></label>
     <button class="btn" type="submit">Anotar</button>
   </form>`;
@@ -676,24 +729,55 @@ function achSheet(id){
   return `<div class="sh-head"><div class="chips"><span class="chip">${ARISTAS.find(r => r.id===a.ar).name}</span><span class="chip ${on?'boss':''}">${on?`Unlocked · ${esc(on)}`:'Locked'}</span>${(a.auto || a.prog) && !on ? '<span class="chip">Se desbloquea solo</span>' : ''}</div><h2 class="sh-title">${a.ic} ${esc(a.name)}</h2><p class="sh-sub">${esc(a.desc)}</p></div>
     ${!on && a.hint ? `<p class="soft" style="background:rgba(60,180,216,.08);border-color:rgba(60,180,216,.3)">${esc(a.hint)}</p>` : ''}
     ${a.prog && !on ? `<p class="soft" style="background:rgba(242,66,106,.08);border-color:rgba(242,66,106,.3)">Van ${num(Math.min(PROG[a.prog](), a.goal))} de ${num(a.goal)}.</p>` : ''}
-    ${on ? `<button class="mini-link" data-act="ach-off" data-id="${id}">Volver a bloquear</button>` : (a.prog || a.auto) ? '<p class="tiny">Se desbloquea solo.</p>' : `<button class="btn" data-act="ach-on" data-id="${id}">¡Lo logramos! · +20 XP</button>`}`;
+    ${on ? `<button class="mini-link" data-act="ach-off" data-id="${id}">Volver a bloquear</button>` : (a.prog || a.auto) ? '<p class="tiny">Se desbloquea solo.</p>' : `<button class="btn hold" data-hold="ach-on" data-id="${id}"><span class="hold-fill" aria-hidden="true"></span><span class="hold-t">¡Lo logramos! · +20 XP</span></button><p class="tiny hold-hint">Mantenelo apretado 5 segundos.</p>`}`;
 }
+/* Tutorial: oscurece y desenfoca la pantalla, menos el botón del que se habla en cada paso */
 const HELP = [
-  ['hoy', 'Hoy', 'Lo importante de un vistazo: cuánto falta para el show, lo que pasa esta semana, tus quests y la caja. Abajo de todo, el Levvel de la banda y tu sol del día.'],
+  ['hoy', 'Hoy', 'Lo importante de un vistazo: cuánto falta para el show, lo que pasa esta semana, tus quests y la caja. Abajo, el Levvel de la banda y los soles del día.'],
   ['agenda', 'Calendario', 'Los miércoles, shows, grabaciones y fechas límite. Tocá un evento para decir si vas o dejar una nota para los otros dos.'],
   ['misiones', 'Quests', 'Lo que hay que hacer, quién y para cuándo. Cada quest cerrada suma XP para la banda. Si no llegás, pedí prórroga: es gratis.'],
-  ['caja', 'Caja', 'La plata de la banda. Los gastos se dividen entre los tres y los ingresos van a la caja común. La app dice quién le pasa a quién para quedar a mano.'],
-  ['banda', 'Banda', 'Se abre tocando el logo de Evvil. Están el Levvel, el álbum de cartas, los achievvilments, el juego, la Evvolución y la bio.'],
+  ['caja', 'Caja', 'La plata de la banda: lo que pagó cada uno, lo que entró y quién le pasa a quién para quedar a mano.'],
+  ['banda', 'Banda', 'Tocando el logo de Evvil: el Levvel, el álbum de cartas, los achievvilments, el juego, la Evvolución y los avisos al celu.'],
   ['swipe', 'Moverse', 'Deslizá a los costados para pasar de Hoy a Calendario, Quests y Caja. Desde Hoy, hacia el otro lado, aparece Banda.'],
 ];
-const SWIPE_IC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7 3 12l5 5M16 7l5 5-5 5M3 12h18"/></svg>';
-let HELPI = 0;
-function helpSheet(){
-  const [v, t, d] = HELP[HELPI], last = HELPI === HELP.length-1;
-  return `<div class="help"><span class="help-ic">${ICON[v] || SWIPE_IC}</span><div class="eyebrow">${HELPI+1} de ${HELP.length}</div>
-    <h2 class="sh-title">${t}</h2><p class="help-d">${d}</p>
-    <div class="help-dots" aria-hidden="true">${HELP.map((_, i) => `<i class="${i===HELPI?'on':''}"></i>`).join('')}</div>
-    <div class="row">${HELPI ? '<button class="btn ghost" data-act="help-prev">Atrás</button>' : ''}<button class="btn" data-act="${last ? 'close' : 'help-next'}">${last ? '¡Listo!' : 'Siguiente'}</button></div></div>`;
+let TOUR = null;
+const tourTarget = v => v==='banda' ? $('.logo-btn') : v==='swipe' ? null : $(`#nav [data-v="${v}"]`);
+function tourOpen(){ closeSheet(); TOUR = {i:0, from:S.ui.view}; tourShow(); }
+function tourShow(){
+  const [v, t, d] = HELP[TOUR.i], last = TOUR.i === HELP.length-1, el = $('#tour'), view = v==='swipe' ? TOUR.from : v;
+  if(S.ui.view !== view){ S.ui.view = view; render(); } else renderTop();
+  scrollTo(0, 0);
+  document.querySelectorAll('.tour-on').forEach(x => x.classList.remove('tour-on'));
+  const tg = tourTarget(v); if(tg) tg.classList.add('tour-on');
+  el.hidden = false; el.className = `tour ${v==='banda' ? 'at-top' : v==='swipe' ? 'at-mid' : 'at-bottom'}`;
+  el.innerHTML = `<div class="tour-dim"></div>${tg ? '<button class="tour-ring" data-act="help-next" aria-label="Siguiente"></button>' : ''}
+    <div class="tour-box" role="dialog" aria-modal="true" aria-labelledby="tour-t"><span class="tour-arrow" aria-hidden="true"></span>
+      <div class="tour-k">${TOUR.i+1} de ${HELP.length}</div><h2 class="tour-t" id="tour-t">${t}</h2><p class="tour-d">${d}</p>
+      ${v==='swipe' ? '<div class="tour-swipe" aria-hidden="true"><i></i></div>' : ''}
+      <div class="tour-dots" aria-hidden="true">${HELP.map((_, i) => `<i class="${i===TOUR.i ? 'on' : ''}"></i>`).join('')}</div>
+      <div class="tour-btns">${TOUR.i ? '<button class="btn ghost sm" data-act="help-prev">Atrás</button>' : ''}<button class="btn sm" data-act="${last ? 'help-end' : 'help-next'}">${last ? '¡Listo!' : 'Siguiente'}</button>${last ? '' : '<button class="mini-link tour-skip" data-act="help-end">Saltar</button>'}</div></div>`;
+  tourPlace(); setTimeout(() => el.querySelector('.tour-btns .btn:last-of-type')?.focus(), 60);
+}
+function holePath(W, H, x, y, w, h, r){
+  return `M0 0H${W}V${H}H0Z M${x+r} ${y}H${x+w-r}A${r} ${r} 0 0 1 ${x+w} ${y+r}V${y+h-r}A${r} ${r} 0 0 1 ${x+w-r} ${y+h}H${x+r}A${r} ${r} 0 0 1 ${x} ${y+h-r}V${y+r}A${r} ${r} 0 0 1 ${x+r} ${y}Z`;
+}
+function tourPlace(){
+  if(!TOUR) return;
+  const el = $('#tour'), v = HELP[TOUR.i][0], tg = tourTarget(v), W = innerWidth, H = innerHeight;
+  const dim = el.querySelector('.tour-dim'), ring = el.querySelector('.tour-ring'), box = el.querySelector('.tour-box');
+  const bw = Math.min(380, W - 32); box.style.width = bw + 'px';
+  if(!tg){ dim.style.clipPath = ''; box.style.left = (W - bw)/2 + 'px'; return; }
+  const r = tg.getBoundingClientRect(), pad = 5, x = Math.round(r.left - pad), y = Math.round(r.top - pad), w = Math.round(r.width + pad*2), h = Math.round(r.height + pad*2);
+  dim.style.clipPath = `path(evenodd, '${holePath(W, H, x, y, w, h, 14)}')`;
+  Object.assign(ring.style, {left:x + 'px', top:y + 'px', width:w + 'px', height:h + 'px'});
+  const cx = r.left + r.width/2, left = Math.max(16, Math.min(W - bw - 16, cx - bw/2));
+  box.style.left = left + 'px'; box.style.setProperty('--ax', Math.max(18, Math.min(bw - 18, cx - left)) + 'px');
+  if(v==='banda'){ box.style.top = (y + h + 18) + 'px'; box.style.bottom = ''; } else { box.style.bottom = (H - y + 18) + 'px'; box.style.top = ''; }
+}
+function tourEnd(){
+  if(!TOUR) return; const back = TOUR.from, el = $('#tour'); TOUR = null;
+  el.hidden = true; el.innerHTML = ''; document.querySelectorAll('.tour-on').forEach(x => x.classList.remove('tour-on'));
+  if(S.ui.view !== back) goView(back); else renderTop();
 }
 function imgSheet(src){ return `<img class="sheet-img" src="${esc(src)}" alt="">`; }
 function infoSheet(){
@@ -755,7 +839,7 @@ function rerender(){ const y = scrollY; render(); scrollTo(0, y); }
 
 /* ---------- actions ---------- */
 const A = {
-  nav(b){ if(b.dataset.mis) S.ui.mis = b.dataset.mis; goView(b.dataset.v); },
+  nav(b){ if(b.dataset.mis) S.ui.mis = b.dataset.mis; goView(b.dataset.v); milkChance(.04); },
   me(b){ S.me = b.dataset.id; save(); rerender(); toast(`«${pick(M[S.me].says)}» · ${M[S.me].name} ${M[S.me].emoji}`); },
   info(){ openSheet(infoSheet); },
   close(){ closeSheet(); },
@@ -764,23 +848,22 @@ const A = {
     const id = b.dataset.id; if(id!==S.me || S.suns[id]) return;
     const today = isoDay(new Date()); S.sunLog.push({id:today+':'+id, d:today, who:id}); gain(5, S.me, 'encendió su sol', posOf(ev, b));
     if(new Date().getHours() < 8) unlock('madrugador');
-    if(IDS.every(i => S.suns[i])){ setTimeout(() => { gain(15, 'band', 'tuvo triple sol: los tres encendieron el suyo'); toast('¡Triple sol! +15 XP'); unlock('triplesol'); rerender(); }, 700); }
-    rerender();
+    if(IDS.every(i => S.suns[i])){ setTimeout(() => { gain(15, 'band', 'tuvo triple sol: los tres encendieron el suyo'); toast('¡Triple sol! +15 XP'); unlock('triplesol'); rerender(); }, 1100); }
+    JUST_LIT = id; rerender(); setTimeout(() => { JUST_LIT = null; }, 1000);
+    milkChance(.12);
   },
   complete(b, ev){
     const t = S.tasks.find(x => x.id===b.dataset.id); if(!t) return;
     const at = posOf(ev, b);
     if(b.dataset.close) closeSheet();
     if(t.done){ t.done = false; t.doneAt = null; addXP(-t.xp); toast(`«${t.title}» volvió a pendientes`); save(); rerender(); return; }
-    const first = !S.tasks.some(x => x.done && x.doneAt);
+    const first = !S.tasks.some(x => x.done && x.doneAt), extra = lateThisWeek(t) ? ' · volvió una vvida' : '';
     t.done = true; t.doneAt = Date.now(); t.doneBy = S.me;
-    let extra = '';
-    if(t.due < isoDay(new Date())) extra = ' · volvió una life';
     gain(t.xp, S.me, `cerró «${t.title}»`, at);
     toast(`+${t.xp} XP para la banda${extra}`);
     if(first) unlock('firstquest');
     if(new Date().getHours() < 5) unlock('buho');
-    milkChance(.05);
+    milkChance(.15);
     checkStreak();
     if(t.boss && boss().left===0){ gain(300, 'band', 'derrotó al Final Boss: la promo del tercer show está completa'); unlock('promo'); }
     rerender();
@@ -845,7 +928,7 @@ const A = {
   enter(b){
     const sp = $('#splash'); S.splashDay = isoDay(new Date()); saveLocal();
     sp.classList.add('leaving'); setTimeout(() => { sp.hidden = true; sp.innerHTML = ''; }, 750);
-    setTimeout(() => milkChance(.12), 900);
+    setTimeout(() => milkChance(.35), 900);
   },
   pill(){
     const now = Date.now(); PILL.push(now); while(PILL.length && now - PILL[0] > 2500) PILL.shift();
@@ -853,9 +936,17 @@ const A = {
   },
   img(b){ const src = b.dataset.src; openSheet(() => imgSheet(src)); },
   'carta-lock'(b){ toast(`Esta carta se da vuelta en el Levvel ${b.dataset.n}`); },
-  help(){ HELPI = 0; openSheet(helpSheet); },
-  'help-next'(){ HELPI = Math.min(HELP.length-1, HELPI+1); refreshSheet(); },
-  'help-prev'(){ HELPI = Math.max(0, HELPI-1); refreshSheet(); },
+  help(){ tourOpen(); },
+  'help-next'(){ if(!TOUR) return; if(TOUR.i < HELP.length-1){ TOUR.i++; tourShow(); } else tourEnd(); },
+  'help-prev'(){ if(!TOUR || !TOUR.i) return; TOUR.i--; tourShow(); },
+  'help-end'(){ tourEnd(); },
+  'push-on'(){
+    if(!window.Push) return;
+    Push.enable().then(r => { rerender(); toast(r==='ok' ? 'Listo: te mandé un aviso de prueba' : r==='denied' ? 'Quedaron bloqueados' : 'No se activaron'); })
+      .catch(e => { console.error(e); rerender(); toast('No pude activar los avisos. Probá de nuevo.'); });
+  },
+  'push-off'(){ if(window.Push) Push.disable().then(() => { rerender(); toast('Avisos apagados en este celu'); }); },
+  parte(){ openSheet(parteSheet); },
   'ach-cat'(b){ const k = b.dataset.k; S.ui.achOpen[k] = !S.ui.achOpen[k]; saveLocal(); rerender(); },
   'ach-all'(){ const all = ARISTAS.every(a => S.ui.achOpen[a.id]); ARISTAS.forEach(a => S.ui.achOpen[a.id] = !all); saveLocal(); rerender(); },
   whoami(){ Sync.pickMember(); },
@@ -896,39 +987,129 @@ const MILK = {
   onEscape(){ stat('milkEsc'); save(); checkAch(); toast('MilkToy se escapó…'); rerender(); },
 };
 function milkChance(p){ if(window.MilkToy) MilkToy.maybe(p, MILK); }
-const VIEW_ONLY = new Set(['nav','me','info','close','ov-next','task','event','cal-move','cal-day','mis-tab','mis-who','mov-f','add','new-task','new-event','new-mov','ach','mov','task-edit','wa-copy','reset','undo','cheer','enter','pill','img','ach-cat','ach-all','whoami','game','members']);
-document.addEventListener('click', e => {
-  if(e.target.id==='sheet'){ closeSheet(); return; }
-  const b = e.target.closest('[data-act]'); if(!b || b.getAttribute('aria-disabled')==='true') return;
-  const act = b.dataset.act, f = A[act]; if(!f) return;
-  e.preventDefault();
+function notify(type, id){ if(window.Push) Push.notify(type, id); }
+const VIEW_ONLY = new Set(['nav','me','info','close','ov-next','task','event','cal-move','cal-day','mis-tab','mis-who','mov-f','add','new-task','new-event','new-mov','ach','mov','task-edit','wa-copy','reset','undo','cheer','enter','pill','img','ach-cat','ach-all','whoami','game','members','help','help-next','help-prev','help-end','carta-lock','mis-boss','push-on','push-off','parte']);
+function runAct(b, act, e){
+  const f = A[act]; if(!f) return;
   const undoable = !VIEW_ONLY.has(act); if(undoable) snap();
   f(b, e); recalc(); if(undoable) checkAch();
   if(undoable && UNDO && UNDO.fresh){ if(JSON.stringify(S) !== UNDO.s) toast('Listo'); else UNDO = null; }
-});
-function goView(v, dir){
-  S.ui.view = v; try{ history.replaceState(null, '', '#'+v); }catch(e){} save(); render(); scrollTo(0, 0);
-  if(dir){ const el = $('#view'); el.classList.remove('in-l', 'in-r'); void el.offsetWidth; el.classList.add(dir==='l' ? 'in-l' : 'in-r'); }
 }
-/* Deslizar a los costados: Banda ← Hoy → Calendario → Quests → Caja */
-const SWIPE_ORDER = ['banda', 'hoy', 'agenda', 'misiones', 'caja'];
-let swipe = null;
-document.addEventListener('touchstart', e => {
-  swipe = null;
-  if(e.touches.length !== 1 || ['#sheet', '#overlay', '#splash', '#gate', '#game'].some(s => !$(s).hidden)) return;
-  if(e.target.closest('input, textarea, select, .tabs')) return;
-  const t = e.touches[0]; swipe = {x:t.clientX, y:t.clientY, at:Date.now()};
-}, {passive:true});
-document.addEventListener('touchend', e => {
-  if(!swipe) return;
-  const t = e.changedTouches[0], dx = t.clientX - swipe.x, dy = t.clientY - swipe.y, dt = Date.now() - swipe.at; swipe = null;
-  if(Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.6 || dt > 700) return;
-  const i = SWIPE_ORDER.indexOf(S.ui.view), next = SWIPE_ORDER[i + (dx < 0 ? 1 : -1)];
-  if(i >= 0 && next) goView(next, dx < 0 ? 'l' : 'r');
-}, {passive:true});
-document.addEventListener('keydown', e => {
-  if(e.key==='Escape'){ if(!$('#overlay').hidden) nextOverlay(); else if(!$('#sheet').hidden) closeSheet(); }
+document.addEventListener('click', e => {
+  if(e.target.id==='sheet'){ closeSheet(); return; }
+  const b = e.target.closest('[data-act]'); if(!b || b.getAttribute('aria-disabled')==='true' || !A[b.dataset.act]) return;
+  e.preventDefault(); runAct(b, b.dataset.act, e);
 });
+
+/* Mantener apretado: «¡Lo logramos!» se desbloquea a los 5 segundos y la tarjeta tiembla cada vez más */
+const HOLD_MS = 5000;
+let hold = null, iosSw = null;
+function haptic(ms){
+  try{
+    if(navigator.vibrate) navigator.vibrate(ms);
+    else { // iPhone: tocar un switch nativo da un golpecito háptico
+      if(!iosSw){ iosSw = document.createElement('label'); iosSw.className = 'sr'; iosSw.setAttribute('aria-hidden', 'true'); iosSw.innerHTML = '<input type="checkbox" switch tabindex="-1">'; document.body.appendChild(iosSw); }
+      iosSw.click();
+    }
+  }catch(e){}
+}
+function holdStart(b){
+  if(hold) return;
+  const card = b.closest('.sheet-panel') || b, t = b.querySelector('.hold-t');
+  hold = {b, card, t, label:t.textContent, t0:performance.now(), next:0};
+  b.classList.add('holding'); card.classList.add('shaking');
+  const step = now => {
+    if(!hold) return;
+    const p = Math.min(1, (now - hold.t0) / HOLD_MS), amp = .8 + p*p*9, j = () => (Math.random() - .5) * amp;
+    card.style.transform = `translate(${j().toFixed(1)}px,${j().toFixed(1)}px) rotate(${(j()*.22).toFixed(2)}deg) scale(${(1 + p*.025).toFixed(3)})`;
+    b.style.setProperty('--p', p.toFixed(3));
+    const left = Math.ceil((HOLD_MS - (now - hold.t0)) / 1000); t.textContent = left > 0 ? `Seguí apretando… ${left}` : '¡Ahí va!';
+    if(now >= hold.next){ haptic(Math.round(10 + p*45)); hold.next = now + 460 - p*380; }
+    if(p >= 1){ const h = hold; holdEnd(false); haptic(160); runAct(h.b, h.b.dataset.hold); return; }
+    hold.raf = requestAnimationFrame(step);
+  };
+  hold.raf = requestAnimationFrame(step);
+}
+function holdEnd(cancel){
+  if(!hold) return; const h = hold; hold = null; cancelAnimationFrame(h.raf);
+  h.card.style.transform = ''; h.card.classList.remove('shaking'); h.b.classList.remove('holding'); h.b.style.setProperty('--p', 0); h.t.textContent = h.label;
+  if(cancel && performance.now() - h.t0 < 1500) toast('Mantenelo apretado 5 segundos');
+}
+document.addEventListener('pointerdown', e => { const b = e.target.closest('[data-hold]'); if(b && e.button === 0){ e.preventDefault(); holdStart(b); } });
+document.addEventListener('pointerup', () => holdEnd(true));
+document.addEventListener('pointercancel', () => holdEnd(true));
+document.addEventListener('contextmenu', e => { if(e.target.closest('[data-hold]')) e.preventDefault(); });
+
+function goView(v){ S.ui.view = v; try{ history.replaceState(null, '', '#'+v); }catch(e){} save(); render(); scrollTo(0, 0); }
+/* Deslizar a los costados: la sección de al lado acompaña al dedo, se puede espiar y volver.
+   Banda ← Hoy → Calendario → Quests → Caja */
+const SWIPE_ORDER = ['banda', 'hoy', 'agenda', 'misiones', 'caja'];
+const SWIPE_BLOCK = ['#sheet', '#overlay', '#splash', '#gate', '#game', '#tour'];
+let sw = null;
+function peekFor(s, dir){
+  if(s.peeks[dir] !== undefined) return s.peeks[dir];
+  const v = SWIPE_ORDER[s.i + dir]; if(!v) return s.peeks[dir] = null;
+  const p = document.createElement('div'); p.className = 'peek'; p.setAttribute('aria-hidden', 'true');
+  Object.assign(p.style, {top:s.top + 'px', left:s.left + 'px', width:s.w + 'px', transform:`translateX(${dir*s.W}px)`});
+  p.innerHTML = VIEWS[v](); $('.shell').appendChild(p);
+  return s.peeks[dir] = p;
+}
+function peekMove(s, dx){
+  const dir = dx < 0 ? 1 : -1, p = peekFor(s, dir), x = p ? dx : dx * .22; // en las puntas, resiste
+  s.dx = x; s.view.style.transform = `translateX(${x}px)`;
+  for(const d of [1, -1]){ const el = s.peeks[d]; if(el){ el.style.transform = `translateX(${x + d*s.W}px)`; el.style.visibility = d===dir ? '' : 'hidden'; } }
+}
+function peekEnd(s, cancel){
+  const dir = s.dx < 0 ? 1 : -1, p = s.peeks[dir], fast = Math.abs(s.vx) > .5 && Math.abs(s.dx) > 30 && Math.sign(s.vx) === Math.sign(s.dx);
+  const go = !cancel && p && (Math.abs(s.dx) > s.W * .35 || fast);
+  const all = [s.view, s.peeks[1], s.peeks[-1]].filter(Boolean), ms = 240;
+  all.forEach(el => el.style.transition = `transform ${ms}ms cubic-bezier(.2,.8,.2,1)`);
+  requestAnimationFrame(() => {
+    if(go){ s.view.style.transform = `translateX(${-dir*s.W}px)`; p.style.transform = 'translateX(0)'; }
+    else { s.view.style.transform = 'translateX(0)'; for(const d of [1, -1]) if(s.peeks[d]) s.peeks[d].style.transform = `translateX(${d*s.W}px)`; }
+  });
+  setTimeout(() => {
+    if(go){ goView(SWIPE_ORDER[s.i + dir]); milkChance(.04); }
+    s.view.style.transition = s.view.style.transform = s.view.style.willChange = '';
+    [s.peeks[1], s.peeks[-1]].forEach(el => el && el.remove());
+    sw = null;
+  }, ms + 20);
+}
+document.addEventListener('touchstart', e => {
+  if(sw && sw.lock === 'x') return; // todavía termina el anterior
+  sw = null;
+  if(e.touches.length !== 1 || SWIPE_BLOCK.some(s => !$(s).hidden) || matchMedia('(min-width:960px)').matches) return;
+  if(e.target.closest('input, textarea, select, .tabs, .filters, [data-hold]')) return;
+  const t = e.touches[0]; sw = {x:t.clientX, y:t.clientY, lx:t.clientX, lt:performance.now(), vx:0, dx:0, lock:null};
+}, {passive:true});
+document.addEventListener('touchmove', e => {
+  if(!sw || sw.done) return;
+  const t = e.touches[0], dx = t.clientX - sw.x, dy = t.clientY - sw.y;
+  if(!sw.lock){
+    if(Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+    sw.lock = Math.abs(dx) > Math.abs(dy) * 1.15 ? 'x' : 'y';
+    if(sw.lock === 'x'){
+      const i = SWIPE_ORDER.indexOf(S.ui.view), view = $('#view'), r = view.getBoundingClientRect();
+      if(i < 0){ sw.lock = 'y'; return; }
+      Object.assign(sw, {i, view, W:innerWidth, left:r.left, w:r.width, top:r.top + scrollY, peeks:{}});
+      view.style.transition = 'none'; view.style.willChange = 'transform';
+    }
+  }
+  if(sw.lock !== 'x') return;
+  e.preventDefault();
+  const now = performance.now(), dt = Math.max(1, now - sw.lt); sw.vx = sw.vx*.6 + ((t.clientX - sw.lx) / dt)*.4; sw.lx = t.clientX; sw.lt = now;
+  peekMove(sw, dx);
+}, {passive:false});
+const swipeEnd = cancel => () => { if(!sw) return; if(sw.lock === 'x' && !sw.done){ sw.done = true; peekEnd(sw, cancel); } else if(sw.lock !== 'x') sw = null; };
+document.addEventListener('touchend', swipeEnd(false), {passive:true});
+document.addEventListener('touchcancel', swipeEnd(true), {passive:true});
+document.addEventListener('keydown', e => {
+  if(e.key==='Escape'){ if(TOUR) tourEnd(); else if(!$('#overlay').hidden) nextOverlay(); else if(!$('#sheet').hidden) closeSheet(); }
+  const h = e.target.closest && e.target.closest('[data-hold]');
+  if(h && (e.key===' ' || e.key==='Enter')){ e.preventDefault(); if(!e.repeat) holdStart(h); }
+});
+document.addEventListener('keyup', e => { if(e.key===' ' || e.key==='Enter') holdEnd(true); });
+addEventListener('resize', () => tourPlace());
 document.addEventListener('change', e => {
   const t = e.target, f = t.closest('form[data-form="task"]'); if(!f) return;
   if(t.name==='when') f.due.value = t.value;
@@ -938,7 +1119,8 @@ document.addEventListener('change', e => {
 document.addEventListener('input', e => {
   const f = e.target.closest('form[data-form="mov"]'); if(!f || f.dataset.k!=='gasto') return;
   const amt = Number(f.amt.value) || 0, by = f.by.value, p = $('#split-prev'); if(!p) return;
-  p.textContent = amt ? (by==='caja' ? `Sale de la caja común.` : `${money(amt/3)} cada uno. ${M[by].name} queda con ${money(amt*2/3)} a favor.`) : '';
+  const sp = [...f.querySelectorAll('[name=split]:checked')].map(x => x.value), n = sp.length, mine = sp.includes(by) ? amt/n : 0;
+  p.textContent = !amt ? '' : by==='caja' ? 'Sale de la caja común.' : !n ? 'Elegí entre quiénes se divide.' : `${money(amt/n)} ${n===1 ? `lo pone ${M[sp[0]].name}` : 'cada uno'}. ${M[by].name} queda con ${money(amt - mine)} a favor.`;
 });
 document.addEventListener('submit', e => {
   const f = e.target.closest('form[data-form]'); if(!f) return; e.preventDefault();
@@ -947,22 +1129,23 @@ document.addEventListener('submit', e => {
   if(kind==='note'){
     const text = String(fd.get('text')||'').trim(); if(!text) return;
     const ev = S.events.find(x => x.id===f.dataset.id); ev.notes = ev.notes || []; ev.notes.push({who:S.me, text, at:Date.now()});
-    gain(3, S.me, `dejó una nota en «${ev.title}»`); if(allNotes() >= 10) unlock('notas');
+    gain(3, S.me, `dejó una nota en «${ev.title}»`); if(allNotes() >= 10) unlock('notas'); notify('note', ev.id);
     refreshSheet(); rerender(); toast('Nota pegada · +3 XP');
   } else if(kind==='task'){
     const vals = {title:String(fd.get('title')).trim(), who:fd.get('who'), due:fd.get('due'), xp:Number(fd.get('xp')), cat:fd.get('cat'), boss:!!fd.get('boss'), song:fd.get('song') || undefined};
     const old = f.dataset.id && S.tasks.find(x => x.id===f.dataset.id);
     if(old){ if(old.done && old.xp !== vals.xp) addXP(vals.xp - old.xp); Object.assign(old, vals); closeSheet(); save(); rerender(); toast('Quest actualizada'); return; }
     const t = {id:'u'+uid(), by:S.me, ...vals};
-    S.tasks.push(t); closeSheet(); gain(5, S.me, `cargó la quest «${t.title}»`); rerender();
+    S.tasks.push(t); closeSheet(); gain(5, S.me, `cargó la quest «${t.title}»`); rerender(); if(t.who !== S.me) notify('task', t.id);
     toast(`Quest creada${t.who===S.me ? '' : ` para ${t.who==='all' ? 'todos' : M[t.who].name}`} · +5 XP`);
   } else if(kind==='event'){
     const ev = {id:'ue'+uid(), type:fd.get('type'), title:String(fd.get('title')).trim(), date:fd.get('date'), time:fd.get('time')||'', place:String(fd.get('place')||'').trim(), rsvp:{}, notes:[]};
     S.events.push(ev); S.ui.calSel = ev.date; const d = pd(ev.date); S.ui.calM = d.getMonth(); S.ui.calY = d.getFullYear();
-    closeSheet(); save(); rerender(); toast('Evento agendado');
+    closeSheet(); save(); rerender(); toast('Evento agendado'); notify('event', ev.id);
   } else if(kind==='mov'){
     const k = f.dataset.k, amt = Math.round(Number(fd.get('amt'))); if(!(amt > 0)) return;
-    const m = {id:'m'+uid(), k, concept:String(fd.get('concept')).trim(), amt, date:fd.get('date')}; if(k==='gasto') m.by = fd.get('by');
+    const m = {id:'m'+uid(), k, concept:String(fd.get('concept')).trim(), amt, date:fd.get('date')};
+    if(k==='gasto'){ m.by = fd.get('by'); const sp = fd.getAll('split'); if(m.by !== 'caja' && !sp.length){ toast('Elegí entre quiénes se divide'); return; } if(m.by !== 'caja' && sp.length < 3) m.split = sp; }
     S.movs.push(m); closeSheet(); gain(10, S.me, `anotó ${k==='gasto'?'el gasto':'el ingreso'} «${m.concept}»`); rerender(); toast('Anotado · +10 XP');
   }
 });
@@ -970,8 +1153,18 @@ let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() 
 function startApp(){
   drawSky(); render(); setInterval(tick, 1000);
   if(document.fonts && document.fonts.ready) document.fonts.ready.then(() => drawHero());
-  maybeSplash();
-  if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+  maybeSplash(); weekBonus();
+  if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+    navigator.serviceWorker.register('sw.js').then(() => window.Push && Push.refresh()).catch(() => {});
+    navigator.serviceWorker.addEventListener('message', e => { if(e.data && e.data.hash) openHash(e.data.hash); });
+  }
+  if(location.hash === '#parte') openHash('#parte');
+}
+// Los avisos al celu abren la app en una sección o en el parte de la semana.
+function openHash(h){
+  const v = (h || '').replace('#', '');
+  if(v === 'parte'){ openSheet(parteSheet); try{ history.replaceState(null, '', '#' + S.ui.view); }catch(e){} }
+  else if(VIEWS[v]) goView(v);
 }
 const SOLES = [[46, 11, '#c4123d'], [30, 23, '#f2426a'], [62, 5, '#93102f'], [38, 31, '#cc3c54'], [26, 17, '#ffcf4a']];
 function maybeSplash(){
