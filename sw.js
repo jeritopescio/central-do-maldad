@@ -1,6 +1,6 @@
 /* Guarda la app en el celu para que abra rápido y sin señal. Los datos viajan aparte (Supabase). */
-const CACHE = 'cdm-v12';
-const SHELL = ['./', 'index.html', 'css/app.css?v=12', 'js/config.js?v=12', 'js/app.js?v=12', 'js/milktoy.js?v=12', 'js/game.js?v=12', 'js/push.js?v=12', 'js/sync.js?v=12', 'manifest.webmanifest', 'fonts/evvil-regular.woff',
+const CACHE = 'cdm-v13';
+const SHELL = ['./', 'index.html', 'css/app.css?v=13', 'js/config.js?v=13', 'js/app.js?v=13', 'js/milktoy.js?v=13', 'js/game.js?v=13', 'js/push.js?v=13', 'js/sync.js?v=13', 'manifest.webmanifest', 'fonts/evvil-regular.woff',
   'img/evvil.svg', 'img/cosito.webp', 'img/fondo.jpg', 'img/jero.webp', 'img/mica.webp', 'img/fran.webp', 'img/bajo.webp', 'img/bata.webp', 'img/guitarra.webp',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
   'img/cartas/carta1.webp', 'img/cartas/carta1-s.webp', 'img/cartas/carta2.webp', 'img/cartas/carta2-s.webp', 'img/cartas/carta3.webp', 'img/cartas/carta3-s.webp', 'img/cartas/carta4.webp', 'img/cartas/carta4-s.webp', 'img/cartas/carta5.webp', 'img/cartas/carta5-s.webp', 'img/cartas/carta6.webp', 'img/cartas/carta6-s.webp', 'img/cartas/carta7.webp', 'img/cartas/carta7-s.webp', 'img/cartas/carta8.webp', 'img/cartas/carta8-s.webp', 'img/cartas/carta9.webp', 'img/cartas/carta9-s.webp'];
