@@ -1,6 +1,6 @@
 const LKEY = 'cdm-local-v1', DKEY = 'cdm-demo-v1';
 const M = {
-  jero:{name:'Jero', emoji:'🧙‍♂️', role:'Batería, SPD y coros', alias:'el mago', c:'var(--jero)', sup:'El ojo de la banda: fotos, videos, bocetos de tapa y el SPD.', says:['Uesa','Wepa','Que ondas','Que onda evvils','Holis','Biuriful']},
+  jero:{name:'Jero', emoji:'🧙‍♂️', role:'Batería, SPD y coros', alias:'el mago', c:'var(--jero)', sup:'El ojo de la banda: fotos, videos, bocetos de tapa y el SPD.', says:['Que onda evvils','Holis','Biuriful']},
   mica:{name:'Mica', emoji:'🧚‍♀️', role:'Bajo y voz principal', alias:'el hada', c:'var(--mica)', sup:'La que ordena: punteo de reuniones, devoluciones de mezcla, el calendario y el contacto con Dani.', says:['En un cachito','No voy']},
   fran:{name:'Fran', emoji:'🦄', role:'Guitarra y voz principal', alias:'el unicornio', c:'var(--fran)', sup:'El que consigue fechas y arma planes: shows, Fraxu, prensa y Spotify. Y la radio.', says:['Oku','Petacular','Roc on','Lo amo']},
 };
@@ -536,7 +536,7 @@ function movRow(x){
 function renderBanda(){
   const L = lvl(S.xp), on = ACH.filter(a => S.ach[a.id]).length;
   const hist = [
-    ['Ene 2024','Fran crea el grupo: arranca Evil Formica','img/evil_formica.webp','logo'],
+    ['Ene 2024','Fran crea el grupo: arranca Evil Formica','img/evil_formica_logo.webp','logo'],
     ['21 mar 2025','Con Colapso y Ortiba en Casa Únclan, como Evil Formica','img/flyer_colapso.jpg'],
     ['Jun 2025','«Somos eVVil»: nueva banda, viejas canciones'],
     ['5 jul 2025','Festival Mugre o Muerte vol. 22 · Fábrica Cita, como Evvil (ex Fórmica)','img/flyer_mugre.jpg'],
@@ -570,7 +570,7 @@ function renderBanda(){
         <li><b>Master:</b> Fermín Irigoyen</li><li><b>Arte:</b> Dani (@danielaojoenblanco)</li><li><b>Videoclip:</b> Aaron Marshall</li><li><b>Mail:</b> evvil.lml@gmail.com</li></ul></details>
       <p class="tiny" style="margin-top:10px">Sin ranking: todo lo que hace cada uno suma al levvel de la banda.</p></section>
     <section class="card" id="avisos"><h2 class="h">Avisos al celu</h2>${pushCard()}
-      <div class="pushes">${pushes().map(p => `<div class="push"><span class="push-ic">${sun({size:22, seed:9})}</span><div style="min-width:0"><div class="push-h"><span>Do Maldad</span><span>${p[0]}</span></div><p>${p[1]}</p></div></div>`).join('')}</div>
+      <div class="pushes">${pushes().map(p => `<div class="push"><span class="push-ic">${sun({size:22, seed:9})}</span><div style="min-width:0"><div class="push-h"><span>Maldad</span><span>${p[0]}</span></div><p>${p[1]}</p></div></div>`).join('')}</div>
       <p class="tiny" style="margin-top:10px">Avisa cuando te cargan una quest, cuando alguien agenda algo o deja una nota, a las 10 si hay algo hoy o mañana, y los lunes con el parte para el grupo. Cada celu los activa una vez.</p></section>
     <section class="card"><h2 class="h">Parte para el grupo</h2><pre class="wa" id="wa-text">${esc(weeklyText())}</pre>
       <div class="row"><a class="btn" href="https://wa.me/?text=${encodeURIComponent(weeklyText())}" target="_blank" rel="noopener">Mandar por WhatsApp</a><button class="btn ghost" data-act="wa-copy">Copiar texto</button></div>

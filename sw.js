@@ -1,6 +1,6 @@
 /* Guarda la app en el celu para que abra rápido y sin señal. Los datos viajan aparte (Supabase). */
-const CACHE = 'cdm-v13';
-const SHELL = ['./', 'index.html', 'css/app.css?v=13', 'js/config.js?v=13', 'js/app.js?v=13', 'js/milktoy.js?v=13', 'js/game.js?v=13', 'js/push.js?v=13', 'js/sync.js?v=13', 'manifest.webmanifest', 'fonts/evvil-regular.woff',
+const CACHE = 'cdm-v14';
+const SHELL = ['./', 'index.html', 'css/app.css?v=14', 'js/config.js?v=14', 'js/app.js?v=14', 'js/milktoy.js?v=14', 'js/game.js?v=14', 'js/push.js?v=14', 'js/sync.js?v=14', 'manifest.webmanifest', 'fonts/evvil-regular.woff',
   'img/evvil.svg', 'img/cosito.webp', 'img/fondo.jpg', 'img/jero.webp', 'img/mica.webp', 'img/fran.webp', 'img/bajo.webp', 'img/bata.webp', 'img/guitarra.webp',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
   'img/cartas/carta1.webp', 'img/cartas/carta1-s.webp', 'img/cartas/carta2.webp', 'img/cartas/carta2-s.webp', 'img/cartas/carta3.webp', 'img/cartas/carta3-s.webp', 'img/cartas/carta4.webp', 'img/cartas/carta4-s.webp', 'img/cartas/carta5.webp', 'img/cartas/carta5-s.webp', 'img/cartas/carta6.webp', 'img/cartas/carta6-s.webp', 'img/cartas/carta7.webp', 'img/cartas/carta7-s.webp', 'img/cartas/carta8.webp', 'img/cartas/carta8-s.webp', 'img/cartas/carta9.webp', 'img/cartas/carta9-s.webp'];
@@ -31,7 +31,7 @@ self.addEventListener('fetch', e => {
 self.addEventListener('push', e => {
   let d = {};
   try{ d = e.data ? e.data.json() : {}; }catch(err){ d = {body:e.data ? e.data.text() : ''}; }
-  e.waitUntil(self.registration.showNotification(d.title || 'Do Maldad', {
+  e.waitUntil(self.registration.showNotification(d.title || 'Maldad', {
     body:d.body || '', icon:'icons/icon-192.png', badge:'icons/icon-192.png', tag:d.tag || undefined, data:{url:d.url || './'},
   }));
 });

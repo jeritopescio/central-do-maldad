@@ -559,7 +559,7 @@ textarea{resize:vertical;min-height:64px;font:500 15px/1.4 var(--f-body)}
 .gate-m img{width:100%;height:110px;object-fit:contain;object-position:bottom}
 .gate-m b{font:400 22px/1 var(--f-display);color:var(--c)}
 
-.tl-img.logo{width:150px;border:0;border-radius:0;background:none}
+.tl-img.logo{width:210px;height:auto;border:0;border-radius:0;background:none}
 
 /* hoy: resumen de lo importante */
 .showstrip{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;width:100%;padding:12px 14px;border-radius:16px;border:1px solid rgba(242,66,106,.28);background:linear-gradient(100deg,#3a0718,#0b0711 65%)}
