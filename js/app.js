@@ -52,7 +52,7 @@ const ACH = [
   {id:'quests25',ar:'banda',ic:'🛠️',name:'Quest machine',desc:'Cerrar 25 quests.',prog:'quests',goal:25},
   {id:'quests100',ar:'banda',ic:'🏗️',name:'Quest legend',desc:'Cerrar 100 quests.',prog:'quests',goal:100},
   {id:'semana',ar:'banda',ic:'🔒',name:'Semana asegurada',desc:'3 quests cerradas en una misma semana.',auto:true},
-  {id:'streak4',ar:'banda',ic:'🔥',name:'Cuatro al hilo',desc:'Un streak de 4 semanas seguidas.',prog:'streak',goal:4},
+  {id:'streak4',ar:'banda',ic:'🔥',name:'Cuatro al hilo',desc:'Una racha de 4 semanas seguidas.',prog:'streak',goal:4},
   {id:'triplesol',ar:'banda',ic:'☀️',name:'Triple sol',desc:'Los tres encendieron su sol el mismo día.',prog:'triple',goal:1},
   {id:'triple7',ar:'banda',ic:'🌞',name:'Semana de sol',desc:'Siete días de triple sol.',prog:'triple',goal:7},
   {id:'todosvan',ar:'banda',ic:'🙌',name:'Los tres van',desc:'Los tres responden «Voy» al mismo miércoles.',auto:true},
@@ -222,7 +222,7 @@ function gain(xp, who, text, at){
   save();
 }
 function checkStreak(){
-  if(weekCount() === 3){ unlock('semana'); setTimeout(() => toast(`Streak: ${S.streak} ${S.streak===1?'semana':'semanas'} en movimiento`), 1400); }
+  if(weekCount() === 3){ unlock('semana'); setTimeout(() => toast(`Racha: ${S.streak} ${S.streak===1?'semana':'semanas'} en movimiento`), 1400); }
 }
 function unlock(id){
   if(S.ach[id]) return; const a = ACH.find(x => x.id===id); if(!a) return;
@@ -267,7 +267,6 @@ function toast(msg){
   toastT = setTimeout(() => t.classList.remove('on', 'has-undo'), u ? Math.max(2800, UNDO.until - Date.now()) : 2800);
 }
 function pick(list){ return list[Math.floor(Math.random()*list.length)]; }
-function shuffled(list){ const a = list.slice(); for(let i = a.length-1; i > 0; i--){ const j = Math.floor(Math.random()*(i+1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 function posOf(ev, el){
   if(ev && ev.clientX) return {x:ev.clientX, y:ev.clientY};
   const r = el.getBoundingClientRect(); return {x:r.left + r.width/2, y:r.top + r.height/2};
@@ -345,7 +344,7 @@ function statusHTML(L, cls='', size=84){
       <div class="tiny"><b>${num(S.xp-L.from)}</b> / ${num(L.to-L.from)} XP para «${esc(L.next || 'el infinito')}»</div></div>
     <div class="meters">
       <div class="meter"><div class="m-lab">7 vvidas</div><div class="cats" aria-label="${S.lives} de 7 vvidas">${LIVES.map((k,i) => catSVG(k, i < S.lives)).join('')}</div><div class="tiny" style="margin-top:6px">${S.lives}/7 · Thelma, Tony y Rober</div></div>
-      <div class="meter"><div class="m-lab">Streak</div><div class="m-val">${S.streak ? `${S.streak} <small>${S.streak===1?'semana':'semanas'} en movimiento</small>` : 'Primera <small>semana</small>'}</div><div class="wk"><i style="width:${Math.min(1, wc/3)*100}%"></i></div><div class="tiny">${wc>=3 ? 'Semana asegurada' : `${wc}/3 quests esta semana`}</div></div>
+      <div class="meter"><div class="m-lab">Racha</div><div class="m-val">${S.streak ? `${S.streak} <small>${S.streak===1?'semana':'semanas'} en movimiento</small>` : 'Primera <small>semana</small>'}</div><div class="wk"><i style="width:${Math.min(1, wc/3)*100}%"></i></div><div class="tiny">${wc>=3 ? 'Semana asegurada' : `${wc}/3 quests esta semana`}</div></div>
     </div>
   </section>`;
 }
@@ -679,6 +678,23 @@ function achSheet(id){
     ${a.prog && !on ? `<p class="soft" style="background:rgba(242,66,106,.08);border-color:rgba(242,66,106,.3)">Van ${num(Math.min(PROG[a.prog](), a.goal))} de ${num(a.goal)}.</p>` : ''}
     ${on ? `<button class="mini-link" data-act="ach-off" data-id="${id}">Volver a bloquear</button>` : (a.prog || a.auto) ? '<p class="tiny">Se desbloquea solo.</p>' : `<button class="btn" data-act="ach-on" data-id="${id}">¡Lo logramos! · +20 XP</button>`}`;
 }
+const HELP = [
+  ['hoy', 'Hoy', 'Lo importante de un vistazo: cuánto falta para el show, lo que pasa esta semana, tus quests y la caja. Abajo de todo, el Levvel de la banda y tu sol del día.'],
+  ['agenda', 'Calendario', 'Los miércoles, shows, grabaciones y fechas límite. Tocá un evento para decir si vas o dejar una nota para los otros dos.'],
+  ['misiones', 'Quests', 'Lo que hay que hacer, quién y para cuándo. Cada quest cerrada suma XP para la banda. Si no llegás, pedí prórroga: es gratis.'],
+  ['caja', 'Caja', 'La plata de la banda. Los gastos se dividen entre los tres y los ingresos van a la caja común. La app dice quién le pasa a quién para quedar a mano.'],
+  ['banda', 'Banda', 'Se abre tocando el logo de Evvil. Están el Levvel, el álbum de cartas, los achievvilments, el juego, la Evvolución y la bio.'],
+  ['swipe', 'Moverse', 'Deslizá a los costados para pasar de Hoy a Calendario, Quests y Caja. Desde Hoy, hacia el otro lado, aparece Banda.'],
+];
+const SWIPE_IC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7 3 12l5 5M16 7l5 5-5 5M3 12h18"/></svg>';
+let HELPI = 0;
+function helpSheet(){
+  const [v, t, d] = HELP[HELPI], last = HELPI === HELP.length-1;
+  return `<div class="help"><span class="help-ic">${ICON[v] || SWIPE_IC}</span><div class="eyebrow">${HELPI+1} de ${HELP.length}</div>
+    <h2 class="sh-title">${t}</h2><p class="help-d">${d}</p>
+    <div class="help-dots" aria-hidden="true">${HELP.map((_, i) => `<i class="${i===HELPI?'on':''}"></i>`).join('')}</div>
+    <div class="row">${HELPI ? '<button class="btn ghost" data-act="help-prev">Atrás</button>' : ''}<button class="btn" data-act="${last ? 'close' : 'help-next'}">${last ? '¡Listo!' : 'Siguiente'}</button></div></div>`;
+}
 function imgSheet(src){ return `<img class="sheet-img" src="${esc(src)}" alt="">`; }
 function infoSheet(){
   return `<div class="sh-head"><h2 class="sh-title">Central do Maldad</h2><p class="sh-sub">La central de Evvil: agenda, quests, caja y achievvilments.</p></div>
@@ -739,7 +755,7 @@ function rerender(){ const y = scrollY; render(); scrollTo(0, y); }
 
 /* ---------- actions ---------- */
 const A = {
-  nav(b){ S.ui.view = b.dataset.v; if(b.dataset.mis) S.ui.mis = b.dataset.mis; try{ history.replaceState(null, '', '#'+S.ui.view); }catch(e){} save(); render(); scrollTo(0, 0); },
+  nav(b){ if(b.dataset.mis) S.ui.mis = b.dataset.mis; goView(b.dataset.v); },
   me(b){ S.me = b.dataset.id; save(); rerender(); toast(`«${pick(M[S.me].says)}» · ${M[S.me].name} ${M[S.me].emoji}`); },
   info(){ openSheet(infoSheet); },
   close(){ closeSheet(); },
@@ -837,6 +853,9 @@ const A = {
   },
   img(b){ const src = b.dataset.src; openSheet(() => imgSheet(src)); },
   'carta-lock'(b){ toast(`Esta carta se da vuelta en el Levvel ${b.dataset.n}`); },
+  help(){ HELPI = 0; openSheet(helpSheet); },
+  'help-next'(){ HELPI = Math.min(HELP.length-1, HELPI+1); refreshSheet(); },
+  'help-prev'(){ HELPI = Math.max(0, HELPI-1); refreshSheet(); },
   'ach-cat'(b){ const k = b.dataset.k; S.ui.achOpen[k] = !S.ui.achOpen[k]; saveLocal(); rerender(); },
   'ach-all'(){ const all = ARISTAS.every(a => S.ui.achOpen[a.id]); ARISTAS.forEach(a => S.ui.achOpen[a.id] = !all); saveLocal(); rerender(); },
   whoami(){ Sync.pickMember(); },
@@ -887,6 +906,26 @@ document.addEventListener('click', e => {
   f(b, e); recalc(); if(undoable) checkAch();
   if(undoable && UNDO && UNDO.fresh){ if(JSON.stringify(S) !== UNDO.s) toast('Listo'); else UNDO = null; }
 });
+function goView(v, dir){
+  S.ui.view = v; try{ history.replaceState(null, '', '#'+v); }catch(e){} save(); render(); scrollTo(0, 0);
+  if(dir){ const el = $('#view'); el.classList.remove('in-l', 'in-r'); void el.offsetWidth; el.classList.add(dir==='l' ? 'in-l' : 'in-r'); }
+}
+/* Deslizar a los costados: Banda ← Hoy → Calendario → Quests → Caja */
+const SWIPE_ORDER = ['banda', 'hoy', 'agenda', 'misiones', 'caja'];
+let swipe = null;
+document.addEventListener('touchstart', e => {
+  swipe = null;
+  if(e.touches.length !== 1 || ['#sheet', '#overlay', '#splash', '#gate', '#game'].some(s => !$(s).hidden)) return;
+  if(e.target.closest('input, textarea, select, .tabs')) return;
+  const t = e.touches[0]; swipe = {x:t.clientX, y:t.clientY, at:Date.now()};
+}, {passive:true});
+document.addEventListener('touchend', e => {
+  if(!swipe) return;
+  const t = e.changedTouches[0], dx = t.clientX - swipe.x, dy = t.clientY - swipe.y, dt = Date.now() - swipe.at; swipe = null;
+  if(Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.6 || dt > 700) return;
+  const i = SWIPE_ORDER.indexOf(S.ui.view), next = SWIPE_ORDER[i + (dx < 0 ? 1 : -1)];
+  if(i >= 0 && next) goView(next, dx < 0 ? 'l' : 'r');
+}, {passive:true});
 document.addEventListener('keydown', e => {
   if(e.key==='Escape'){ if(!$('#overlay').hidden) nextOverlay(); else if(!$('#sheet').hidden) closeSheet(); }
 });
@@ -934,13 +973,14 @@ function startApp(){
   maybeSplash();
   if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
 }
+const SOLES = [[46, 11, '#c4123d'], [30, 23, '#f2426a'], [62, 5, '#93102f'], [38, 31, '#cc3c54'], [26, 17, '#ffcf4a']];
 function maybeSplash(){
   const sp = $('#splash');
   sp.innerHTML = `<div class="sp-bg"></div>
     <div class="sp-top"><img class="sp-letras" src="img/evvil.svg" alt="Evvil"><h1 class="sp-title">Central do Maldad</h1></div>
     <button class="sp-sun" data-act="enter" aria-label="Entrar a la Central"><img src="img/cosito.webp" alt=""></button>
     <p class="sp-hint">Tocá el sol para entrar</p>
-    ${shuffled(CARTAS).slice(0, 3).map((n, i) => `<img class="sp-card c${i+1}" src="img/cartas/carta${n}.webp" alt="">`).join('')}
+    ${SOLES.map(([size, seed, color], i) => `<span class="sp-sol s${i+1}" style="color:${color}">${sun({size, seed, n:9})}</span>`).join('')}
     <img class="sp-fly f1" src="img/guitarra.webp" alt=""><img class="sp-fly f2" src="img/bata.webp" alt=""><img class="sp-fly f3" src="img/bajo.webp" alt="">
     <div class="sp-band"><img class="sp-m sp-mica" src="img/mica.webp" alt=""><img class="sp-m sp-jero" src="img/jero.webp" alt=""><img class="sp-m sp-fran" src="img/fran.webp" alt=""></div>`;
   sp.hidden = false; sp.className = 'splash';
